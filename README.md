@@ -1,5 +1,5 @@
 # Surgical Robotics Challenge
-For more information regarding the challenge, please visit [Surgical Robotics Challenge 2021-2022](https://surgical-robotics-ai.github.io/surgical-robotics-challenge/challenge-2021.html) or [Surgical Robotics Challenge 2023-2024](https://surgical-robotics-ai.github.io/surgical-robotics-challenge-2023/challenge-2023.html).
+For more information regarding the challenge, please visit [Surgical Robotics Challenge 2021-2022](https://surgical-robotics-ai.github.io/surgical-robotics-challenge/challenge-2021.html), [Surgical Robotics Challenge 2023-2024](https://surgical-robotics-ai.github.io/surgical-robotics-challenge-2023/challenge-2023.html) or [Surgical Robotics Challenge ICRA 2026](https://surgical-robotics-ai.github.io/icra-competition-2026/index.html).
 
 # [Discussions Forum](https://github.com/surgical-robotics-ai/surgical_robotics_challenge/discussions)
 Please checkout the [Discussions Tab](https://github.com/surgical-robotics-ai/surgical_robotics_challenge/discussions) for asking questions, posting suggestions, connecting with the community, and for keeping up to date with the challenge.
