@@ -80,7 +80,7 @@ class PSMCRTKWrapper:
         self.measured_cp_pub = ral.publisher(namespace + '/' + name + '/' + 'measured_cp', PoseStamped,
                                                queue_size=1)
 
-        self.measured_jaw_pub = ral.publisher(namespace + '/' + name + '/jaw/' + 'measure_js', JointState,
+        self.measured_jaw_pub = ral.publisher(namespace + '/' + name + '/jaw/' + 'measured_js', JointState,
                                          queue_size=1)
 
         self.T_b_w_pub = ral.publisher(namespace + '/' + name + '/' + 'T_b_w', PoseStamped,
