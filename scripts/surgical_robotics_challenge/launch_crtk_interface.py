@@ -136,8 +136,8 @@ class PSMCRTKWrapper:
     def servo_jaw_jp_cb(self, jp):
         self._jaw_angle = jp.position[0]
         # Set jaw angle and run grasp logic
-        # self.arm.set_jaw_angle(self._jaw_angle)
-        # self.arm.run_grasp_logic(self._jaw_angle)
+        self.arm.set_jaw_angle(self._jaw_angle)
+        self.arm.run_grasp_logic(self._jaw_angle)
 
     def publish_js(self):
         self._measured_js_msg.header.stamp = self.simulation_manager.get_time_msg()
