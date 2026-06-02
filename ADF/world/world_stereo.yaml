@@ -59,7 +59,7 @@ cameraL:
   up: { x: 0.0, y: 1.0, z: 0.0 }
   clipping plane: *cam_common_clipping_plane
   field view angle: *cam_common_fov 
-  monitor: 1
+  monitor: 3
   parent: BODY CameraFrame
   publish image: True
   publish image interval: 5
@@ -68,6 +68,7 @@ cameraL:
   publish depth resolution: *cam_common_pub_depth_res
   multipass: True # Set to True to enable shadows
   mouse control multipliers: { pan: 0.1, rotate: 1.0, scroll: 0.1, arcball: 0.1 }
+  window resolution: { width: 1280, height: 1024 }
 
 cameraL2:
   namespace: cameras/
@@ -109,7 +110,8 @@ cameraR:
   publish depth resolution: *cam_common_pub_depth_res
   visible: True
   mouse control multipliers: { pan: 0.1, rotate: 1.0, scroll: 0.1, arcball: 0.1 }
-  multipass: True
+  # multipass: True
+  window resolution: { width: 1280, height: 1024 }
 
 camera3:
   namespace: cameras/
