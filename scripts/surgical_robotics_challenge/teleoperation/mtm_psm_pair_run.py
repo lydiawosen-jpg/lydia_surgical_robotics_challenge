@@ -103,7 +103,7 @@ class ControllerInterface:
             psm,
             T_c_b,
             self.update_dt,
-            set_jaw_only_when_coag=True,
+            set_jaw_only_when_coag=False,
         )
         if idx == 1:
             self.cmd1_xyz = cmd_xyz
