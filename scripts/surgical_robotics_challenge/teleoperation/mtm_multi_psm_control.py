@@ -47,7 +47,7 @@ from surgical_robotics_challenge.simulation_manager import SimulationManager
 import time
 from PyKDL import Frame, Rotation, Vector
 from argparse import ArgumentParser
-from input_devices.mtm_device_crtk import MTM
+from surgical_robotics_challenge.teleoperation.input_devices.mtm_device_crtk import MTM
 from itertools import cycle
 from surgical_robotics_challenge.ecm_arm import ECM
 from surgical_robotics_challenge.utils.jnt_control_gui import JointGUI
@@ -56,7 +56,7 @@ from surgical_robotics_challenge.teleoperation.mtm_teleop_common import apply_mt
 
 
 class ControllerInterface:
-    def __init__(self, leader, psm_arms, ecm, update_frequency):
+    def __init__(self, leader, psm_arms, ecm, update_frequency, enable_force_feedback=False):
         self.counter = 0
         self.leader = leader
         self.psm_arms = cycle(psm_arms)
@@ -75,6 +75,7 @@ class ControllerInterface:
 
         self._T_c_b = None
         self._update_T_c_b = True
+        self._enable_force_feedback = enable_force_feedback
 
         self.leader.enable_gravity_comp()
 
@@ -103,6 +104,7 @@ class ControllerInterface:
             self._T_c_b,
             self.update_dt,
             set_jaw_only_when_coag=False,
+            enable_force_feedback=self._enable_force_feedback,
         )
 
     def update_visual_markers(self):
@@ -138,6 +140,7 @@ if __name__ == "__main__":
     parser.add_argument('--three', action='store', dest='run_psm_three', help='Control PSM3', default=False)
     parser.add_argument('--mtm', action='store', dest='mtm_name', help='Name of MTM to Bind', default='/dvrk/MTMR/')
     parser.add_argument('--update_frequency', action='store', dest='update_frequency', help='Update Frequency', default=200)
+    parser.add_argument('-e', '--enable_force_feedback', action='store', dest='enable_force_feedback', help='Enable MTM force feedback', default=False)
 
     parsed_args = parser.parse_args()
     print('Specified Arguments')
@@ -154,6 +157,7 @@ if __name__ == "__main__":
     parsed_args.run_psm_one = get_boolean_from_opt(parsed_args.run_psm_one)
     parsed_args.run_psm_two = get_boolean_from_opt(parsed_args.run_psm_two)
     parsed_args.run_psm_three = get_boolean_from_opt(parsed_args.run_psm_three)
+    parsed_args.enable_force_feedback = get_boolean_from_opt(parsed_args.enable_force_feedback)
 
     simulation_manager = SimulationManager(parsed_args.client_name)
 
@@ -181,7 +185,13 @@ if __name__ == "__main__":
     else:
         leader = MTM(simulation_manager.get_ral(), parsed_args.mtm_name)
         leader.set_base_frame(Frame(Rotation.RPY((3.14 - 0.8) / 2, 0, 0), Vector(0, 0, 0)))
-        controller1 = ControllerInterface(leader, psm_arms, cam, update_frequency=int(parsed_args.update_frequency))
+        controller1 = ControllerInterface(
+            leader,
+            psm_arms,
+            cam,
+            update_frequency=int(parsed_args.update_frequency),
+            enable_force_feedback=parsed_args.enable_force_feedback,
+        )
         controllers.append(controller1)
 
         rate = simulation_manager.get_ral().create_rate(int(parsed_args.update_frequency))

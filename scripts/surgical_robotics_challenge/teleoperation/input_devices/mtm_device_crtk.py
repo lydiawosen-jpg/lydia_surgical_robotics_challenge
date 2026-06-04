@@ -44,6 +44,7 @@
 # //==============================================================================
 
 import PyKDL
+from enum import Enum
 from PyKDL import Frame, Rotation, Vector
 from geometry_msgs.msg import PoseStamped, TransformStamped, TwistStamped, WrenchStamped, Quaternion
 from sensor_msgs.msg import Joy, JointState
@@ -157,6 +158,12 @@ def get_crtk_cp_msg_type_from_str(msg_type_str):
         raise TypeError
 
 
+class TeleopMode(Enum):
+    CLUTCH = 0
+    COAG = 1
+    HOLD = 2
+
+
 # Init everything related to Geomagic
 class MTM:
     # The name should include the full qualified prefix. I.e. '/Geomagic/', or '/omniR_' etc.
@@ -200,6 +207,7 @@ class MTM:
         self._switch_psm_duration = self.ral.create_duration(0.5)
 
         self._arm_publishing = False
+        self._teleop_mode = TeleopMode.HOLD
 
         self._jp = []
         self._jv = []
@@ -376,7 +384,7 @@ class MTM:
     def servo_cf(self, wrench):
         # Set the force command frame to be absolute (not relative to current orientation)
         self._set_orientation_absolute_pub.publish(Bool(data=True))
-        # wrench = self._T_baseoffset_inverse.M * wrench
+        wrench = self._T_baseoffset.M * wrench
         wrench_msg = kdl_wrench_to_wrench_msg(wrench)
         self._wrench_pub.publish(wrench_msg)
 
@@ -414,12 +422,29 @@ class MTM:
 
     def free(self):
         self._free_pub.publish(Empty())
-        self.unlock_orientation()
 
     def free_with_orientation_lock(self):
-        curr_quat = self.pose.M.GetQuaternion()
         self.free()
+        curr_quat = self.pose.M.GetQuaternion()
         self.lock_orientation(curr_quat)
+
+    def set_teleop_mode(self, mode: TeleopMode):
+        previous_mode = self._teleop_mode
+
+        if mode == TeleopMode.CLUTCH:
+            if previous_mode != TeleopMode.CLUTCH:
+                self.free_with_orientation_lock()
+        elif mode == TeleopMode.COAG:
+            if previous_mode != TeleopMode.COAG:
+                self.unlock_orientation()
+                self.free()
+        else:
+            self.hold()
+
+        self._teleop_mode = mode
+
+    def get_teleop_mode(self):
+        return self._teleop_mode
 
     def lock_orientation(self, quat):
         quat_msg = Quaternion()
