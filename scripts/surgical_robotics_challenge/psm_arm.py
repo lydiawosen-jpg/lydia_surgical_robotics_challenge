@@ -99,7 +99,7 @@ class PSM:
         self.actuators.append(self.simulation_manager._client.get_obj_handle(name + '/Actuator0'))
         time.sleep(0.5)
         self.grasped = [False, False, False]
-        self.graspable_objs_prefix = ["Needle", "Thread", "Puzzle"]
+        self.graspable_objs_prefix = ["Needle", "Thread", "Puzzle", "ring"]
         self.grasped_obj_name = None
         self.grasp_actuation_jaw_angle = 0.05
         self.T_t_b_home = coordinate_frames.PSM.T_t_b_home
