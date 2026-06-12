@@ -141,6 +141,7 @@ class HapticsGainGui(QtWidgets.QWidget):
         msg = Float32()
         msg.data = float(value)
         self._publishers[field_name].publish(msg)
+        print(f"[DEBUG] Sent ROS update -> {field_name}: {value}")
 
     def _publish_all(self):
         for field_name, spin in self._spinboxes.items():
