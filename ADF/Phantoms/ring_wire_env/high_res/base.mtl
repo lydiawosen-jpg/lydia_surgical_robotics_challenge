@@ -1,22 +1,12 @@
-# Blender 4.5.9 LTS MTL File: 'None'
+# Blender 4.5.9 LTS MTL File: 'convex_ring_and_wire_ring_wire.blend'
 # www.blender.org
 
-newmtl Material.003
+newmtl Material
 Ns 250.000000
 Ka 1.000000 1.000000 1.000000
 Kd 0.621709 0.603364 0.654418
 Ks 0.500000 0.500000 0.500000
 Ke 0.000000 0.000000 0.000000
 Ni 1.450000
-d 1.000000
-illum 2
-
-newmtl basemat.001
-Ns 360.000000
-Ka 1.000000 1.000000 1.000000
-Kd 0.621710 0.603360 0.654420
-Ks 0.499992 0.499992 0.499992
-Ke 0.000000 0.000000 0.000000
-Ni 1.000000
 d 1.000000
 illum 2
