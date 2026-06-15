@@ -14,3 +14,4 @@ __pycache__
 *.egg-info
 build
 *.txt.user
+ADF/Phantoms/ring_wire_env/default.yaml.tmp

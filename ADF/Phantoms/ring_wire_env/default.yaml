@@ -67,7 +67,7 @@ BODY ring_visual:
   name: ring_visual
   mesh: ring_visual.OBJ
   collision mesh: "B\xE9zierCircle.OBJ"
-  collision mesh type: CONCAVE_MESH
+  collision mesh type: CONVEX_HULL
   mass: 0.01
   collision margin: 0.0001
   scale: 1.0
@@ -95,11 +95,11 @@ BODY ring_visual:
   publish joint positions: false
   friction:
     rolling: 0.0
-    static: 2.0
+    static: 0.5
   restitution: 0.1
   damping:
     angular: 0.1
-    linear: 1.0
+    linear: 0.04
   visible: true
   collision groups: []
   use material: false
