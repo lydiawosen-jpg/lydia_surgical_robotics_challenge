@@ -12,7 +12,7 @@ from scipy.optimize import minimize_scalar, OptimizeResult
 from rclpy.executors import MultiThreadedExecutor
 from geometry_msgs.msg import WrenchStamped
 from std_msgs.msg import Bool
-
+from sensor_msgs.msg import Joy
 
 # ==========================================
 # 1. CORE BEZIER MATH
@@ -37,8 +37,11 @@ class WireTrackerNode(Node):
         
         self.get_logger().info("Waiting for static wire pose from AMBF...")
 
+        self.coag_pressed = False
+        self.coag_sub = self.create_subscription(Joy, '/console1/operator_present', self.coag_callback, 1)
+        
         # Start a background thread that calls control_loop() repeatedly
-        self.control_thread = threading.Thread(target=self.run_control_loop, daemon=True)
+        self.control_thread = threading.Thread(ros2 run dvrk_robot dvrk_system -j system-MTML-MTMR.jsontarget=self.run_control_loop, daemon=True)
         self.control_thread.start()
         
         # Initialize the wire's world frame as None until we receive it
@@ -67,6 +70,10 @@ class WireTrackerNode(Node):
         self.get_logger().info("Successfully subscribed to wire and ring topics.")     
 
 
+    def coag_callback(self):
+        # Updates if button is pressed or not
+        self.coag_pressed = msg.buttons[0] # index 0 is specific button that maps to caog control
+    
     def camera_pose_callback(self, msg_camera):
         camera_pos = PyKDL.Vector(msg_camera.pose.position.x, msg_camera.pose.position.y, msg_camera.pose.position.z)
         camera_rot = PyKDL.Rotation.Quaternion(msg_camera.pose.orientation.x, msg_camera.pose.orientation.y, msg_camera.pose.orientation.z, msg_camera.pose.orientation.w)
@@ -204,6 +211,10 @@ class WireTrackerNode(Node):
         return f_radial # this is a numpy array
 
     def transform_and_publish_wrench(self, f_radial): 
+        # if coag is pressed then continue
+        if not self.coag_pressed:
+            return
+        
         max_force = 2.0
         
         # Build a PyKDL Vector from radial force, only rotate (don't translate) a force vector
