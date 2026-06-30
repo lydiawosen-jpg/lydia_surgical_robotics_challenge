@@ -31,7 +31,7 @@ class WireTrackerNode(Node):
         
         # LOAD THE WIRE DATA ONCE (Saves CPU cycles)
         # Using the absolute path so it runs from any workspace folder safely
-        json_path = os.path.expanduser("/mnt/c/Users/lydia/my_bezier_curve.json")
+        json_path = os.path.join(os.path.dirname(__file__), "my_bezier_curve.json")
         with open(json_path, 'r') as f:
             self.my_total_curve = json.load(f)
         
