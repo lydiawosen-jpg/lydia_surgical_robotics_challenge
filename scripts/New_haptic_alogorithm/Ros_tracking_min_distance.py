@@ -41,7 +41,7 @@ class WireTrackerNode(Node):
         self.coag_sub = self.create_subscription(Joy, '/console1/operator_present', self.coag_callback, 1)
         
         # Start a background thread that calls control_loop() repeatedly
-        self.control_thread = threading.Thread(ros2 run dvrk_robot dvrk_system -j system-MTML-MTMR.jsontarget=self.run_control_loop, daemon=True)
+        self.control_thread = threading.Thread(target=self.run_control_loop, daemon=True)
         self.control_thread.start()
         
         # Initialize the wire's world frame as None until we receive it
