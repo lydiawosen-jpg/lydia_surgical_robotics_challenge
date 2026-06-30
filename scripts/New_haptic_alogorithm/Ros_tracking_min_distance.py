@@ -246,11 +246,11 @@ class WireTrackerNode(Node):
         self.transform_and_publish_wrench(f_radial)
 
     def run_control_loop(self):
-        rate_hz = 200
-        period = 1.0 / rate_hz
-        while rclpy.ok():
+        rate_hz = 200 # number of updates per second
+        period = 1.0 / rate_hz # wait this many seconds before each update
+        while rclpy.ok(): # returns true as long as ros2 is still running and hasn't been interrupted by ctrl c
             self.control_loop()
-            time.sleep(period)
+            time.sleep(period) # limits updates to realistically set frequency
 
 
 def main(args=None):
