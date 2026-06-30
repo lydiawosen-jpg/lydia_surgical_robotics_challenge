@@ -31,7 +31,7 @@ class WireTrackerNode(Node):
         
         # LOAD THE WIRE DATA ONCE (Saves CPU cycles)
         # Using the absolute path so it runs from any workspace folder safely
-        json_path = os.path.expanduser("/mnt/c/Users/lydia/my_bezier_curve.json")
+        json_path = os.path.join(os.path.dirname(__file__), "my_bezier_curve.json")
         with open(json_path, 'r') as f:
             self.my_total_curve = json.load(f)
         
@@ -257,11 +257,11 @@ class WireTrackerNode(Node):
         self.transform_and_publish_wrench(f_radial)
 
     def run_control_loop(self):
-        rate_hz = 200
-        period = 1.0 / rate_hz
-        while rclpy.ok():
+        rate_hz = 200 # number of updates per second
+        period = 1.0 / rate_hz # wait this many seconds before each update
+        while rclpy.ok(): # returns true as long as ros2 is still running and hasn't been interrupted by ctrl c
             self.control_loop()
-            time.sleep(period)
+            time.sleep(period) # limits updates to realistically set frequency
 
 
 def main(args=None):
