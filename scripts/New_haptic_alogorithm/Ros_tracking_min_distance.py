@@ -13,6 +13,7 @@ from rclpy.executors import MultiThreadedExecutor
 from geometry_msgs.msg import WrenchStamped
 from std_msgs.msg import Bool
 from sensor_msgs.msg import Joy
+from datetime import datetime
 
 # ==========================================
 # 1. CORE BEZIER MATH
@@ -40,13 +41,15 @@ class WireTrackerNode(Node):
         self.coag_pressed = False
         self.coag_sub = self.create_subscription(Joy, '/console1/operator_present', self.coag_callback, 1)
         
+        # Initialize the wire's world frame as None until we receive it
+        self.latest_T_wire_world = None  
+        self.latest_T_camera_world = None
+        self.latest_ring_msg = None
+        
         # Start a background thread that calls control_loop() repeatedly
         self.control_thread = threading.Thread(target=self.run_control_loop, daemon=True)
         self.control_thread.start()
         
-        # Initialize the wire's world frame as None until we receive it
-        self.latest.T_wire_world = None  
-        self.latest.T_camera_world = None
 
         # Subscribe to the wire and ring state topics
         self.wire_sub = self.create_subscription(RigidBodyState,'/ambf/env/phantom/wire_visual/State',self.wire_pose_callback,1)
@@ -70,7 +73,7 @@ class WireTrackerNode(Node):
         self.get_logger().info("Successfully subscribed to wire and ring topics.")     
 
 
-    def coag_callback(self):
+    def coag_callback(self, msg):
         # Updates if button is pressed or not
         self.coag_pressed = msg.buttons[0] # index 0 is specific button that maps to caog control
     
@@ -99,7 +102,7 @@ class WireTrackerNode(Node):
         T_ring_world = PyKDL.Frame(ring_rot, ring_pos)
         
         # Transform matrix for ring rlative to wire
-        T_ring_wire = self.T_wire_world.Inverse() * T_ring_world
+        T_ring_wire = self.latest_T_wire_world.Inverse() * T_ring_world
         return T_ring_wire
 
 
@@ -182,19 +185,19 @@ class WireTrackerNode(Node):
     #     angular_error_deg = np.degrees(angular_error_rad)
 
     #     # 5. Log your new error metrics
-    #     self.get_logger().info(f"Rotational Error: {angular_error_deg:.2f}°")
+    #     self.get_logger().info(f"Rotational Erro$ T_camera_worldr: {angular_error_deg:.2f}°")
 
     #     # break down rotaional into which direction
     #     return angular_error_deg, u_tangent, u_ring_z
 
 
     def compute_radial_force(self, min_distance, closest_wire_point, ring_com):
-        kp_pos = 50  # Spring constant for position (N/m)
+        kp_pos = 120  # Spring constant for position (N/m)
         kd_pos = 0  # Damping constant for velocity (N/(m/s))
         kp_rot = 0  # Spring constant for rotation (N·m/°) # is this normally in radians?
         kd_rot = 0  # Damping constant for angular velocity (N·m/(°/s))
 
-        radial_deadband = 0.005 # meters, distance from wire centerline where no force is applied
+        radial_deadband = 0.0 # meters, distance from wire centerline where no force is applied
         radial_error = min_distance
 
         angular_deadband = 5.0 # degrees, angle from wire tangent where no force is applied
@@ -207,7 +210,7 @@ class WireTrackerNode(Node):
             u_vector_ring_to_wire = vector_ring_to_wire / np.linalg.norm(vector_ring_to_wire)
             
             effective_radial_error = radial_error - radial_deadband
-            f_radial = kp_pos * effective_radial_error * u_vector_ring_to_wire
+            f_radial = kp_pos * effective_radial_error * u_vector_ring_to_wire  # keeping u_vector positive causes convergent force
         return f_radial # this is a numpy array
 
     def transform_and_publish_wrench(self, f_radial): 
@@ -221,7 +224,7 @@ class WireTrackerNode(Node):
         f_radial_vec = PyKDL.Vector(f_radial[0], f_radial[1], f_radial[2])
 
         # Rotation from wire frame to camera frame: wire -> world -> camera
-        R_wire_to_camera = self.T_camera_world.M.Inverse() * self.T_wire_world.M
+        R_wire_to_camera = self.latest_T_camera_world.M.Inverse() * self.latest_T_wire_world.M
 
         f_radial_camera = R_wire_to_camera * f_radial_vec
         
@@ -241,7 +244,8 @@ class WireTrackerNode(Node):
 
         # Send your wrenchstamped to servo channels
         self.wrench_pub_L.publish(msg_f_radial)
-        self.wrench_pub_R.publish(msg_f_radial)
+        #self.wrench_pub_R.publish(msg_f_radial)
+        print("Sucessfully published wrench")
 
     def control_loop(self):
         if self.latest_ring_msg is None or self.latest_T_wire_world is None or self.latest_T_camera_world is None:
@@ -257,23 +261,23 @@ class WireTrackerNode(Node):
         self.transform_and_publish_wrench(f_radial)
 
     def run_control_loop(self):
+        t1 = datetime.now()
         rate_hz = 200 # number of updates per second
         period = 1.0 / rate_hz # wait this many seconds before each update
         while rclpy.ok(): # returns true as long as ros2 is still running and hasn't been interrupted by ctrl c
             self.control_loop()
             time.sleep(period) # limits updates to realistically set frequency
+            t2 = datetime.now()
+            print("\t ***Delta T (seconds):", (t2 - t1).total_seconds())
+            t1 = t2 
 
 
 def main(args=None):
     rclpy.init(args=args)
     tracker = WireTrackerNode()
     
-    # Use a MultiThreadedExecutor so callbacks can run independently
-    executor = MultiThreadedExecutor()
-    executor.add_node(tracker)
-
     try:
-        executor.spin()
+        rclpy.spin(tracker) # create a single thread executor, add this to it, and spin it to keep the node alive
     except KeyboardInterrupt:
         pass
     finally:
@@ -349,6 +353,8 @@ if __name__ == '__main__':
     # import from geometry.msg get WrenchStamped
     # use body/servo_cf and not spatial
     # publish to mtmR/servo_cf and mtmL/servo_cf
+
+    # need to make force feedback only act on psm ring is touching
 
    
    # put calculation stuff outisde of callback in diff thread and set que size to 1, callbacks should be small, in beginning of method make a copy to store and use most recent ring info once
