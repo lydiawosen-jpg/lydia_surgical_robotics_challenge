@@ -45,7 +45,9 @@ class WireTrackerNode(Node):
         self.latest_T_wire_world = None  
         self.latest_T_camera_world = None
         self.latest_ring_msg = None
-        
+        self.latest_twist_L = None
+        self.latest_twist_R = None
+
         # Start a background thread that calls control_loop() repeatedly
         self.control_thread = threading.Thread(target=self.run_control_loop, daemon=True)
         self.control_thread.start()
@@ -71,9 +73,7 @@ class WireTrackerNode(Node):
         abs_flag = Bool()
         abs_flag.data = True
         self.orientation_abs_pub_L.publish(abs_flag)
-        self.orientation_abs_pub_R.publish(abs_flag)
-        
-        self.get_logger().info("Successfully subscribed to wire and ring topics.")     
+        self.orientation_abs_pub_R.publish(abs_flag)   
 
 
     def twist_callback_L(self, msg_twist_L):
@@ -237,9 +237,6 @@ class WireTrackerNode(Node):
 
         # Rotation from wire frame to camera frame: wire -> world -> camera
         R_wire_to_camera = self.latest_T_camera_world.M.Inverse() * self.latest_T_wire_world.M
-
-        f_radial_camera = R_wire_to_camera * f_radial_vec
-        
         # Include correction for mtm console tilt
         T_baseoffset = PyKDL.Frame(PyKDL.Rotation.RPY((3.14 - 0.8) / 2, 0, 0), PyKDL.Vector(0, 0, 0))
         
