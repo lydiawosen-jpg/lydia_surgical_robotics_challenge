@@ -10,7 +10,7 @@ from rclpy.node import Node
 from ambf_msgs.msg import RigidBodyState, RigidBodyCmd
 from scipy.optimize import minimize_scalar, OptimizeResult
 from rclpy.executors import MultiThreadedExecutor
-from geometry_msgs.msg import WrenchStamped
+from geometry_msgs.msg import WrenchStamped, TwistStamped
 from std_msgs.msg import Bool
 from sensor_msgs.msg import Joy
 from datetime import datetime
@@ -64,6 +64,9 @@ class WireTrackerNode(Node):
         self.orientation_abs_pub_L = self.create_publisher(Bool, '/MTML/body/set_cf_orientation_absolute', 1) 
         self.orientation_abs_pub_R = self.create_publisher(Bool, '/MTMR/body/set_cf_orientation_absolute', 1)
 
+        self.twist_sub_L = self.create_subscription(TwistStamped, '/MTML/measured_cv', self.twist_callback_L, 1)
+        self.twist_sub_R = self.create_subscription(TwistStamped, '/MTMR/measured_cv', self.twist_callback_R, 1)
+
         # Publish the absolute oriention flag once
         abs_flag = Bool()
         abs_flag.data = True
@@ -72,6 +75,12 @@ class WireTrackerNode(Node):
         
         self.get_logger().info("Successfully subscribed to wire and ring topics.")     
 
+
+    def twist_callback_L(self, msg_twist_L):
+        self.latest_twist_L = msg_twist_L
+
+    def twist_callback_R(self, msg_twist_R):
+        self.latest_twist_R = msg_twist_R
 
     def coag_callback(self, msg):
         # Updates if button is pressed or not
@@ -191,37 +200,40 @@ class WireTrackerNode(Node):
     #     return angular_error_deg, u_tangent, u_ring_z
 
 
-    def compute_radial_force(self, min_distance, closest_wire_point, ring_com):
-        kp_pos = 120  # Spring constant for position (N/m)
-        kd_pos = 0  # Damping constant for velocity (N/(m/s))
-        kp_rot = 0  # Spring constant for rotation (N·m/°) # is this normally in radians?
-        kd_rot = 0  # Damping constant for angular velocity (N·m/(°/s))
-
-        radial_deadband = 0.0 # meters, distance from wire centerline where no force is applied
-        radial_error = min_distance
-
-        angular_deadband = 5.0 # degrees, angle from wire tangent where no force is applied
-
-        # Translational force feedback calculation
-        if radial_error <= radial_deadband:
-            f_radial = np.array([0.0, 0.0, 0.0])
-        else:
+    def compute_linear_force(self, min_distance, closest_wire_point, ring_com, kp_pos, linear_deadband):
+        linear_error = min_distance
+        # Initialize force and unit vector to zero in case the error is within the deadband
+        f_linear = np.array([0.0, 0.0, 0.0])
+        u_vector_ring_to_wire = np.array([0.0, 0.0, 0.0])
+        
+        if linear_error > linear_deadband:
             vector_ring_to_wire = closest_wire_point - ring_com  
             u_vector_ring_to_wire = vector_ring_to_wire / np.linalg.norm(vector_ring_to_wire)
             
-            effective_radial_error = radial_error - radial_deadband
-            f_radial = kp_pos * effective_radial_error * u_vector_ring_to_wire  # keeping u_vector positive causes convergent force
-        return f_radial # this is a numpy array
+            effective_linear_error = linear_error - linear_deadband
+            f_linear = kp_pos * effective_linear_error * u_vector_ring_to_wire # keeping u_vector positive causes convergent force
+        return f_linear, u_vector_ring_to_wire  # f_linear is a numpy array realtive to wire
+    
+    def compute_linear_damping_L(self, kd_pos,u_vector_ring_to_wire): 
+        mtmL_vel = np.array([self.latest_twist_L.twist.linear.x, self.latest_twist_L.twist.linear.y, self.latest_twist_L.twist.linear.z])
+        # Project MTML velocity onto the pull direction
+        vel_into_wall = np.dot(mtmL_vel, u_vector_ring_to_wire)
+        f_linear_damping_L = kd_pos * vel_into_wall * u_vector_ring_to_wire
+        return f_linear_damping_L # is a numpy array realtive to wire
+    
+    def compute_linear_damping_R(self, kd_pos, u_vector_ring_to_wire):
+        mtmR_vel = np.array([self.latest_twist_R.twist.linear.x, self.latest_twist_R.twist.linear.y, self.latest_twist_R.twist.linear.z])
+        # Project MTMR velocity onto the pull direction
+        vel_into_wall = np.dot(mtmR_vel, u_vector_ring_to_wire)
+        f_linear_damping_R = kd_pos * vel_into_wall * u_vector_ring_to_wire
+        return f_linear_damping_R # is a numpy array realtive to wire
 
-    def transform_and_publish_wrench(self, f_radial): 
+    def transform_and_publish_wrench(self, f_total_linear_L, f_total_linear_R): 
         # if coag is pressed then continue
         if not self.coag_pressed:
             return
         
         max_force = 2.0
-        
-        # Build a PyKDL Vector from radial force, only rotate (don't translate) a force vector
-        f_radial_vec = PyKDL.Vector(f_radial[0], f_radial[1], f_radial[2])
 
         # Rotation from wire frame to camera frame: wire -> world -> camera
         R_wire_to_camera = self.latest_T_camera_world.M.Inverse() * self.latest_T_wire_world.M
@@ -230,35 +242,56 @@ class WireTrackerNode(Node):
         
         # Include correction for mtm console tilt
         T_baseoffset = PyKDL.Frame(PyKDL.Rotation.RPY((3.14 - 0.8) / 2, 0, 0), PyKDL.Vector(0, 0, 0))
-        f_radial_camera = T_baseoffset.M * f_radial_camera
         
-
-        # Create wrenchstamped message type and fill it in
-        msg_f_radial = WrenchStamped()
-        msg_f_radial.wrench.force.x = np.clip(f_radial_camera.x(), -max_force, max_force)
-        msg_f_radial.wrench.force.y = np.clip(f_radial_camera.y(), -max_force, max_force)
-        msg_f_radial.wrench.force.z = np.clip(f_radial_camera.z(), -max_force, max_force)
-        msg_f_radial.wrench.torque.x = 0.0
-        msg_f_radial.wrench.torque.y = 0.0
-        msg_f_radial.wrench.torque.z = 0.0
+        def to_camera_frame(f_L_or_R):
+            f_vec = PyKDL.Vector(f_L_or_R[0], f_L_or_R[1], f_L_or_R[2])
+            f_cam = T_baseoffset.M * (R_wire_to_camera * f_vec)
+            return f_cam
+        
+        f_total_L_cam = to_camera_frame(f_total_linear_L)
+        f_total_R_cam = to_camera_frame(f_total_linear_R)
+        
+        def build_wrench(f_cam):
+            wrench_msg = WrenchStamped()
+            wrench_msg.wrench.force.x = float(np.clip(f_cam.x(), -max_force, max_force)) # WrenchStamped expects float, but np.clip returns a numpy scalar
+            wrench_msg.wrench.force.y = float(np.clip(f_cam.y(), -max_force, max_force))
+            wrench_msg.wrench.force.z = float(np.clip(f_cam.z(), -max_force, max_force))
+            wrench_msg.wrench.torque.x = 0.0
+            wrench_msg.wrench.torque.y = 0.0
+            wrench_msg.wrench.torque.z = 0.0
+            return wrench_msg
 
         # Send your wrenchstamped to servo channels
-        self.wrench_pub_L.publish(msg_f_radial)
-        #self.wrench_pub_R.publish(msg_f_radial)
-        print("Sucessfully published wrench")
+        self.wrench_pub_L.publish(build_wrench(f_total_L_cam))
+        self.wrench_pub_R.publish(build_wrench(f_total_R_cam))
 
     def control_loop(self):
-        if self.latest_ring_msg is None or self.latest_T_wire_world is None or self.latest_T_camera_world is None:
+        kp_pos = 50  # Spring constant for position (N/m)
+        kd_pos = 0.5  # Damping constant for velocity (N/(m/s))
+        kp_rot = 0  # Spring constant for rotation (N·m/°) # is this normally in radians?
+        kd_rot = 0  # Damping constant for angular velocity (N·m/(°/s))
+        linear_deadband = 0.005 # meters, distance from wire centerline where no force is applied
+        angular_deadband = 5.0 # degrees, angle from wire tangent where no force is applied
+        
+        if (self.latest_ring_msg is None or
+            self.latest_T_wire_world is None or
+            self.latest_T_camera_world is None or
+            self.latest_twist_L is None or
+            self.latest_twist_R is None):
             return
-        msg_ring = self.latest_ring_msg
-        T_ring_wire = self.get_ring_frame_in_wire(msg_ring)
+        T_ring_wire = self.get_ring_frame_in_wire(self.latest_ring_msg)
         ring_com = np.array([T_ring_wire.p.x(), T_ring_wire.p.y(), T_ring_wire.p.z()])
         closest_t, min_distance, closest_wire_point, winning_segment_points = self.get_closest_wire_point(ring_com)
         if min_distance > 0.015:
             print("Force feedback disabled, ring has come off the wire")
             return
-        f_radial = self.compute_radial_force(min_distance, closest_wire_point, ring_com)
-        self.transform_and_publish_wrench(f_radial)
+        f_linear, u_vector_ring_to_wire = self.compute_linear_force(min_distance, closest_wire_point, ring_com, kp_pos, linear_deadband)
+        f_linear_damping_L = self.compute_linear_damping_L(kd_pos, u_vector_ring_to_wire)
+        f_linear_damping_R = self.compute_linear_damping_R(kd_pos, u_vector_ring_to_wire)
+        f_total_linear_L = f_linear - f_linear_damping_L
+        f_total_linear_R = f_linear - f_linear_damping_R
+
+        self.transform_and_publish_wrench(f_total_linear_L, f_total_linear_R)  # Publish the total linear force to both MTMs
 
     def run_control_loop(self):
         t1 = datetime.now()
