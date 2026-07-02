@@ -7,7 +7,7 @@ import rclpy
 import threading
 import time
 from rclpy.node import Node
-from ambf_msgs.msg import RigidBodyState, RigidBodyCmd
+from ambf_msgs.msg import RigidBodyState, RigidBodyCmd, ActuatorCmd
 from scipy.optimize import minimize_scalar, OptimizeResult
 from rclpy.executors import MultiThreadedExecutor
 from geometry_msgs.msg import WrenchStamped, TwistStamped
@@ -37,9 +37,6 @@ class WireTrackerNode(Node):
             self.my_total_curve = json.load(f)
         
         self.get_logger().info("Waiting for static wire pose from AMBF...")
-
-        self.coag_pressed = False
-        self.coag_sub = self.create_subscription(Joy, '/console1/operator_present', self.coag_callback, 1)
         
         # Initialize the wire's world frame as None until we receive it
         self.latest_T_wire_world = None  
@@ -47,11 +44,19 @@ class WireTrackerNode(Node):
         self.latest_ring_msg = None
         self.latest_twist_L = None
         self.latest_twist_R = None
+        self.coag_pressed = False
+        self.ring_grasped_psm1= False
+        self.ring_grasped_psm2= False
 
         # Start a background thread that calls control_loop() repeatedly
         self.control_thread = threading.Thread(target=self.run_control_loop, daemon=True)
         self.control_thread.start()
-        
+
+        self.psm1_grasp_sub = self.create_subscription( ActuatorCmd, "/ambf/env/ghosts/psm1/Actuator0/Command", self.grasp_psm1_callback, 1)
+        self.psm2_grasp_sub = self.create_subscription( ActuatorCmd, "/ambf/env/ghosts/psm2/Actuator0/Command", self.grasp_psm2_callback, 1)
+
+        # Subscribe to the coagulation pedal topic
+        self.coag_sub = self.create_subscription(Joy, '/console1/operator_present', self.coag_callback, 1)
 
         # Subscribe to the wire and ring state topics
         self.wire_sub = self.create_subscription(RigidBodyState,'/ambf/env/phantom/wire_visual/State',self.wire_pose_callback,1)
@@ -75,6 +80,12 @@ class WireTrackerNode(Node):
         self.orientation_abs_pub_L.publish(abs_flag)
         self.orientation_abs_pub_R.publish(abs_flag)   
 
+
+    def grasp_psm1_callback(self, msg):
+        self.ring_grasped_psm1 = msg.actuate 
+
+    def grasp_psm2_callback(self, msg):
+        self.ring_grasped_psm2 = msg.actuate  
 
     def twist_callback_L(self, msg_twist_L):
         self.latest_twist_L = msg_twist_L
@@ -259,16 +270,26 @@ class WireTrackerNode(Node):
             return wrench_msg
 
         # Send your wrenchstamped to servo channels
-        self.wrench_pub_L.publish(build_wrench(f_total_L_cam))
-        self.wrench_pub_R.publish(build_wrench(f_total_R_cam))
+        zero_wrench = build_wrench(PyKDL.Vector(0.0, 0.0, 0.0))
+        
+        if self.ring_grasped_psm1:
+            self.wrench_pub_L.publish(build_wrench(f_total_L_cam))
+        else:
+            self.wrench_pub_L.publish(zero_wrench)
+
+        # if self.ring_grasped_psm2:
+        #     self.wrench_pub_R.publish(build_wrench(f_total_R_cam))
+        # else:
+        #     self.wrench_pub_R.publish(zero_wrench)
+         
 
     def control_loop(self):
-        kp_pos = 300  # Spring constant for position (N/m)
-        kd_pos = 0  # Damping constant for velocity (N/(m/s))
+        kp_pos = 100  # Spring constant for position (N/m)
+        kd_pos = 3  # Damping constant for velocity (N/(m/s))
         kp_rot = 0  # Spring constant for rotation (N·m/°) # is this normally in radians?
         kd_rot = 0  # Damping constant for angular velocity (N·m/(°/s))
-        linear_deadband = 0.005 # meters, distance from wire centerline where no force is applied
-        angular_deadband = 5.0 # degrees, angle from wire tangent where no force is applied
+        linear_deadband = 0.0001 # meters, distance from wire centerline where no force is applied
+        angular_deadband = 0  # degrees, angle from wire tangent where no force is applied
         
         if (self.latest_ring_msg is None or
             self.latest_T_wire_world is None or
@@ -276,7 +297,8 @@ class WireTrackerNode(Node):
             self.latest_twist_L is None or
             self.latest_twist_R is None):
             return
-        T_ring_wire = self.get_ring_frame_in_wire(self.latest_ring_msg)
+        ring_msg = self.latest_ring_msg
+        T_ring_wire = self.get_ring_frame_in_wire(ring_msg)
         ring_com = np.array([T_ring_wire.p.x(), T_ring_wire.p.y(), T_ring_wire.p.z()])
         closest_t, min_distance, closest_wire_point, winning_segment_points = self.get_closest_wire_point(ring_com)
         if min_distance > 0.015:
