@@ -263,8 +263,8 @@ class WireTrackerNode(Node):
         self.wrench_pub_R.publish(build_wrench(f_total_R_cam))
 
     def control_loop(self):
-        kp_pos = 50  # Spring constant for position (N/m)
-        kd_pos = 0.5  # Damping constant for velocity (N/(m/s))
+        kp_pos = 300  # Spring constant for position (N/m)
+        kd_pos = 0  # Damping constant for velocity (N/(m/s))
         kp_rot = 0  # Spring constant for rotation (N·m/°) # is this normally in radians?
         kd_rot = 0  # Damping constant for angular velocity (N·m/(°/s))
         linear_deadband = 0.005 # meters, distance from wire centerline where no force is applied
