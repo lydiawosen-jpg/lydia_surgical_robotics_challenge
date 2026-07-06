@@ -177,38 +177,41 @@ class WireTrackerNode(Node):
 
         return closest_t, min_distance, closest_wire_point, winning_segment_points
         
-    # def compute_rotational_error(self,closest_t, T_ring_wire, winning_segment_points):
+    def compute_rotational_error(self,closest_t, T_ring_wire, winning_segment_points):
         
-    #     # 1. Calculate the tangent vector (derivative) at your closest_t
-    #     P0, P1, P2, P3 = winning_segment_points
-    #     tangent = (3 * (1 - closest_t)**2 * (P1 - P0) + 
-    #             6 * (1 - closest_t) * closest_t * (P2 - P1) + 
-    #             3 * closest_t**2 * (P3 - P2)) # this should be a function since its the same excpet for one variable, to make it go faster
+        # 1. Calculate the tangent vector (derivative) at your closest_t
+        P0, P1, P2, P3 = winning_segment_points
+         
+        # 1. Calculate the tangent vector (derivative) at your closest_t
+        P0, P1, P2, P3 = winning_segment_points
+        tangent = (3 * (1 - closest_t)**2 * (P1 - P0) + 
+                6 * (1 - closest_t) * closest_t * (P2 - P1) + 
+                3 * closest_t**2 * (P3 - P2)) # this should be a function since its the same excpet for one variable, to make it go faster
 
-    #     # 2. Convert tangent into a unit vector
-    #     u_tangent = tangent / np.linalg.norm(tangent)
+        # 2. Convert tangent into a unit vector
+        u_tangent = tangent / np.linalg.norm(tangent)
 
-    #     # 3. Extract the Ring's Z-axis unit vector from its KDL rotation matrix
-    #     # In PyKDL, Frame.M.UnitZ() gives the local Z axis vector relative to the wire frame
-    #     u_ring_z = np.array([T_ring_wire.M.UnitZ().x(), 
-    #                         T_ring_wire.M.UnitZ().y(), 
-    #                         T_ring_wire.M.UnitZ().z()])
+        # 3. Extract the Ring's Z-axis unit vector from its KDL rotation matrix
+        # In PyKDL, Frame.M.UnitZ() gives the local Z axis vector relative to the wire frame
+        u_ring_z = np.array([T_ring_wire.M.UnitZ().x(), 
+                            T_ring_wire.M.UnitZ().y(), 
+                            T_ring_wire.M.UnitZ().z()])
 
-    #     # 4. Calculate the angular error
-    #     dot_product = np.dot(u_tangent, u_ring_z)
+        # 4. Calculate the angular error
+        dot_product = np.dot(u_tangent, u_ring_z)
 
-    #     # Use absolute value if direction/flipping doesn't matter
-    #     dot_product_val = abs(dot_product) 
+        # Use absolute value if direction/flipping doesn't matter
+        #dot_product_val = abs(dot_product) 
 
-    #     clipped_dot = np.clip(dot_product_val, -1.0, 1.0) # Clipping to avoid floating-point math errors outside [-1, 1]
-    #     angular_error_rad = np.arccos(clipped_dot)
-    #     angular_error_deg = np.degrees(angular_error_rad)
+        clipped_dot = np.clip(dot_product, -1.0, 1.0) # Clipping to avoid floating-point math errors outside [-1, 1]
+        angular_error_rad = np.arccos(clipped_dot)
+        angular_error_deg = np.degrees(angular_error_rad)
 
-    #     # 5. Log your new error metrics
-    #     self.get_logger().info(f"Rotational Erro$ T_camera_worldr: {angular_error_deg:.2f}°")
+        # 5. Log your new error metrics
+        self.get_logger().info(f"Rotational Erro$ T_camera_worldr: {angular_error_deg:.2f}°")
 
-    #     # break down rotaional into which direction
-    #     return angular_error_deg, u_tangent, u_ring_z
+        # break down rotaional into which direction
+        return angular_error_deg, u_tangent, u_ring_z, dot_product  
 
 
     def compute_linear_force(self, min_distance, closest_wire_point, ring_com, kp_pos, linear_deadband):
@@ -239,12 +242,40 @@ class WireTrackerNode(Node):
         f_linear_damping_R = kd_pos * vel_into_wall * u_vector_ring_to_wire
         return f_linear_damping_R # is a numpy array realtive to wire
 
-    def transform_and_publish_wrench(self, f_total_linear_L, f_total_linear_R): 
+   def compute_torque(self, angular_error_deg, u_tangent, u_ring_z, dot_product, kp_rot, angular_deadband):
+    if angular_error_deg < angular_deadband:
+            torque_angular = np.array([0.0, 0.0, 0.0])
+        else:
+            # Calculate the axis of rotation for the angular error
+            u_ring_z_aligned = -u_ring_z if dot_product < 0 else u_ring_z
+            rotation_axis = np.cross(u_tangent, u_ring_z_aligned)
+            if np.linalg.norm(rotation_axis) > 1e-6:  # safety check - cross product with zero angle is zero vector, norm of this would cause dividing by zero
+                u_rotation_axis = rotation_axis / np.linalg.norm(rotation_axis)
+            else:
+                u_rotation_axis = np.array([0.0, 0.0, 0.0])  # No meaningful rotation axis
+
+            effective_angular_error_rad = np.radians(angular_error_deg - angular_deadband)
+            torque_angular = kp_rot * effective_angular_error_rad * u_rotation_axis # torque is in direction of error
+    return torque_angular # is a numpy array realtive to wire
+
+    def compute_torque_damping_L(self, kd_rot, u_rotation_axis):
+        mtmL_ang_vel = np.array([self.latest_twist_L.twist.angular.x, self.latest_twist_L.twist.angular.y, self.latest_twist_L.twist.angular.z])
+        # Project MTML angular velocity onto the rotation axis
+        ang_vel_into_wall = np.dot(mtmL_ang_vel, u_rotation_axis)
+        torque_damping_L = kd_rot * ang_vel_into_wall * u_rotation_axis
+        return torque_damping_L # is a numpy array realtive to wire
+
+    def compute_torque_damping_R(self, kd_rot, u_rotation_axis):
+        mtmR_ang_vel = np.array([self.latest_twist_R.twist.angular.x, self.latest_twist_R.twist.angular.y, self.latest_twist_R.twist.angular.z])
+        # Project MTMR angular velocity onto the rotation axis
+        ang_vel_into_wall = np.dot(mtmR_ang_vel, u_rotation_axis)
+        torque_damping_R = kd_rot * ang_vel_into_wall * u_rotation_axis
+        return torque_damping_R # is a numpy array realtive to wire
+   
+    def transform_and_publish_wrench(self, max_force, max_torque, f_total_linear_L, f_total_linear_R, torque_total_L, torque_total_R): 
         # if coag is pressed then continue
         if not self.coag_pressed:
             return
-        
-        max_force = 2.0
 
         # Rotation from wire frame to camera frame: wire -> world -> camera
         R_wire_to_camera = self.latest_T_camera_world.M.Inverse() * self.latest_T_wire_world.M
@@ -258,32 +289,37 @@ class WireTrackerNode(Node):
         
         f_total_L_cam = to_camera_frame(f_total_linear_L)
         f_total_R_cam = to_camera_frame(f_total_linear_R)
+
+        torque_total_L_cam = to_camera_frame(torque_total_L)
+        torque_total_R_cam = to_camera_frame(torque_total_R)
         
-        def build_wrench(f_cam):
+        def build_wrench(f_cam, t_cam):
             wrench_msg = WrenchStamped()
             wrench_msg.wrench.force.x = float(np.clip(f_cam.x(), -max_force, max_force)) # WrenchStamped expects float, but np.clip returns a numpy scalar
             wrench_msg.wrench.force.y = float(np.clip(f_cam.y(), -max_force, max_force))
             wrench_msg.wrench.force.z = float(np.clip(f_cam.z(), -max_force, max_force))
-            wrench_msg.wrench.torque.x = 0.0
-            wrench_msg.wrench.torque.y = 0.0
-            wrench_msg.wrench.torque.z = 0.0
+            wrench_msg.wrench.torque.x = float(np.clip(t_cam.x(), -max_torque, max_torque))
+            wrench_msg.wrench.torque.y = float(np.clip(t_cam.y(), -max_torque, max_torque))
+            wrench_msg.wrench.torque.z = float(np.clip(t_cam.z(), -max_torque, max_torque))
             return wrench_msg
 
         # Send your wrenchstamped to servo channels
-        zero_wrench = build_wrench(PyKDL.Vector(0.0, 0.0, 0.0))
+        zero_wrench = build_wrench(PyKDL.Vector(0.0, 0.0, 0.0), PyKDL.Vector(0.0, 0.0, 0.0))
         
         if self.ring_grasped_psm1:
-            self.wrench_pub_L.publish(build_wrench(f_total_L_cam))
+            self.wrench_pub_L.publish(build_wrench(f_total_L_cam, torque_total_L_cam))
         else:
             self.wrench_pub_L.publish(zero_wrench)
 
         # if self.ring_grasped_psm2:
-        #     self.wrench_pub_R.publish(build_wrench(f_total_R_cam))
+        #     self.wrench_pub_R.publish(build_wrench(f_total_R_cam, torque_total_R_cam))
         # else:
         #     self.wrench_pub_R.publish(zero_wrench)
          
 
     def control_loop(self):
+        max_force = 2.0 # N
+        max_torque = 0.05 # N·m
         kp_pos = 100  # Spring constant for position (N/m)
         kd_pos = 3  # Damping constant for velocity (N/(m/s))
         kp_rot = 0  # Spring constant for rotation (N·m/°) # is this normally in radians?
@@ -309,8 +345,15 @@ class WireTrackerNode(Node):
         f_linear_damping_R = self.compute_linear_damping_R(kd_pos, u_vector_ring_to_wire)
         f_total_linear_L = f_linear - f_linear_damping_L
         f_total_linear_R = f_linear - f_linear_damping_R
+        
+        angular_error_deg, u_tangent, u_ring_z, dot_product = self.compute_rotational_error(closest_t, T_ring_wire, winning_segment_points)
+        torque_angular = self.compute_torque(angular_error_deg, u_tangent, u_ring_z, dot_product, kp_rot, angular_deadband)
+        torque_damping_L = self.compute_torque_damping_L(kd_rot, u_vector_ring_to_wire)
+        torque_damping_R = self.compute_torque_damping_R(kd_rot, u_vector_ring_to_wire)
+        torque_total_L = -torque_angular - torque_damping_L # negative torque angular to resist error rotation
+        torque_total_R = -torque_angular - torque_damping_R # negative torque angular to resist error rotation
 
-        self.transform_and_publish_wrench(f_total_linear_L, f_total_linear_R)  # Publish the total linear force to both MTMs
+        self.transform_and_publish_wrench(max_force, max_torque, f_total_linear_L, f_total_linear_R, torque_total_L, torque_total_R)  # Publish the total linear force to both MTMs
 
     def run_control_loop(self):
         t1 = datetime.now()
@@ -421,17 +464,19 @@ if __name__ == '__main__':
 
 
 
-    # --------Rotational force feedback calculation---------
-        # if angular_error_deg < angular_deadband:
-        #     torque_angular = np.array([0.0, 0.0, 0.0])
-        # else:
-        #     # Calculate the axis of rotation for the angular error
-        #     u_ring_z_aligned = -u_ring_z if dot_product < 0 else u_ring_z
-        #     rotation_axis = np.cross(u_tangent, u_ring_z_aligned)
-        #     if np.linalg.norm(rotation_axis) > 1e-6:  # safety check - cross product with zero angle is zero vector, norm of this would cause dividing by zero
-        #         u_rotation_axis = rotation_axis / np.linalg.norm(rotation_axis)
-        #     else:
-        #         u_rotation_axis = np.array([0.0, 0.0, 0.0])  # No meaningful rotation axis
+   #  --------Rotational force feedback calculation---------
+        if angular_error_deg < angular_deadband:
+            torque_angular = np.array([0.0, 0.0, 0.0])
+        else:
+            # Calculate the axis of rotation for the angular error
+            u_ring_z_aligned = -u_ring_z if dot_product < 0 else u_ring_z
+            rotation_axis = np.cross(u_tangent, u_ring_z_aligned)
+            if np.linalg.norm(rotation_axis) > 1e-6:  # safety check - cross product with zero angle is zero vector, norm of this would cause dividing by zero
+                u_rotation_axis = rotation_axis / np.linalg.norm(rotation_axis)
+            else:
+                u_rotation_axis = np.array([0.0, 0.0, 0.0])  # No meaningful rotation axis
 
-        #     effective_angular_error_rad = np.radians(angular_error_deg - angular_deadband)
-        #     torque_angular = kp_rot * effective_angular_error_rad * u_rotation_axis
+            effective_angular_error_rad = np.radians(angular_error_deg - angular_deadband)
+            torque_angular = kp_rot * effective_angular_error_rad * u_rotation_axis # torque is in direction of error
+
+        f_total_torque_L = -torque_angular - torque_damping_L # negative torque angular to resist error rotation
