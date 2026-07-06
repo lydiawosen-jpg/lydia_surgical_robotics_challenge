@@ -178,26 +178,25 @@ class WireTrackerNode(Node):
         return closest_t, min_distance, closest_wire_point, winning_segment_points
         
     def compute_rotational_error(self,closest_t, T_ring_wire, winning_segment_points):
-        
-        # 1. Calculate the tangent vector (derivative) at your closest_t
+        # Calculate the tangent vector (derivative) at your closest_t
         P0, P1, P2, P3 = winning_segment_points
          
-        # 1. Calculate the tangent vector (derivative) at your closest_t
+        # Calculate the tangent vector (derivative) at your closest_t
         P0, P1, P2, P3 = winning_segment_points
         tangent = (3 * (1 - closest_t)**2 * (P1 - P0) + 
                 6 * (1 - closest_t) * closest_t * (P2 - P1) + 
                 3 * closest_t**2 * (P3 - P2)) # this should be a function since its the same excpet for one variable, to make it go faster
 
-        # 2. Convert tangent into a unit vector
+        # Convert tangent into a unit vector
         u_tangent = tangent / np.linalg.norm(tangent)
 
-        # 3. Extract the Ring's Z-axis unit vector from its KDL rotation matrix
+        # Extract the Ring's Z-axis unit vector from its KDL rotation matrix
         # In PyKDL, Frame.M.UnitZ() gives the local Z axis vector relative to the wire frame
         u_ring_z = np.array([T_ring_wire.M.UnitZ().x(), 
                             T_ring_wire.M.UnitZ().y(), 
                             T_ring_wire.M.UnitZ().z()])
 
-        # 4. Calculate the angular error
+        # Calculate the angular error
         dot_product = np.dot(u_tangent, u_ring_z)
 
         # Use absolute value if direction/flipping doesn't matter
@@ -207,8 +206,8 @@ class WireTrackerNode(Node):
         angular_error_rad = np.arccos(clipped_dot)
         angular_error_deg = np.degrees(angular_error_rad)
 
-        # 5. Log your new error metrics
-        self.get_logger().info(f"Rotational Erro$ T_camera_worldr: {angular_error_deg:.2f}°")
+        # Log new error metrics
+        #self.get_logger().info(f"Rotational Erro$ T_camera_worldr: {angular_error_deg:.2f}°")
 
         # break down rotaional into which direction
         return angular_error_deg, u_tangent, u_ring_z, dot_product  
@@ -316,10 +315,10 @@ class WireTrackerNode(Node):
     def control_loop(self):
         max_force = 2.0 # N
         max_torque = 0.05 # N·m
-        kp_pos = 100  # Spring constant for position (N/m)
+        kp_pos = 120  # Spring constant for position (N/m)
         kd_pos = 3  # Damping constant for velocity (N/(m/s))
-        kp_rot = 0  # Spring constant for rotation (N·m/°) # is this normally in radians?
-        kd_rot = 0  # Damping constant for angular velocity (N·m/(°/s))
+        kp_rot = 0.1  # Spring constant for rotation (N·m/rad)
+        kd_rot = 0.0  # Damping constant for angular velocity (N·m/(rad/s))
         linear_deadband = 0.0001 # meters, distance from wire centerline where no force is applied
         angular_deadband = 0  # degrees, angle from wire tangent where no force is applied
         
@@ -460,19 +459,3 @@ if __name__ == '__main__':
 
 
 
-   #  --------Rotational force feedback calculation---------
-        if angular_error_deg < angular_deadband:
-            torque_angular = np.array([0.0, 0.0, 0.0])
-        else:
-            # Calculate the axis of rotation for the angular error
-            u_ring_z_aligned = -u_ring_z if dot_product < 0 else u_ring_z
-            rotation_axis = np.cross(u_tangent, u_ring_z_aligned)
-            if np.linalg.norm(rotation_axis) > 1e-6:  # safety check - cross product with zero angle is zero vector, norm of this would cause dividing by zero
-                u_rotation_axis = rotation_axis / np.linalg.norm(rotation_axis)
-            else:
-                u_rotation_axis = np.array([0.0, 0.0, 0.0])  # No meaningful rotation axis
-
-            effective_angular_error_rad = np.radians(angular_error_deg - angular_deadband)
-            torque_angular = kp_rot * effective_angular_error_rad * u_rotation_axis # torque is in direction of error
-
-        f_total_torque_L = -torque_angular - torque_damping_L # negative torque angular to resist error rotation
