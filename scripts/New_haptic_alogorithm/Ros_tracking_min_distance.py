@@ -258,18 +258,14 @@ class WireTrackerNode(Node):
             torque_angular = kp_rot * effective_angular_error_rad * u_rotation_axis # torque is in direction of error
     return torque_angular # is a numpy array realtive to wire
 
-    def compute_torque_damping_L(self, kd_rot, u_rotation_axis):
+    def compute_torque_damping_L(self, kd_rot):
         mtmL_ang_vel = np.array([self.latest_twist_L.twist.angular.x, self.latest_twist_L.twist.angular.y, self.latest_twist_L.twist.angular.z])
-        # Project MTML angular velocity onto the rotation axis
-        ang_vel_into_wall = np.dot(mtmL_ang_vel, u_rotation_axis)
-        torque_damping_L = kd_rot * ang_vel_into_wall * u_rotation_axis
+        torque_damping_L = kd_rot * mtmL_ang_vel # torque in same direction as mtmL
         return torque_damping_L # is a numpy array realtive to wire
 
-    def compute_torque_damping_R(self, kd_rot, u_rotation_axis):
+    def compute_torque_damping_R(self, kd_rot):
         mtmR_ang_vel = np.array([self.latest_twist_R.twist.angular.x, self.latest_twist_R.twist.angular.y, self.latest_twist_R.twist.angular.z])
-        # Project MTMR angular velocity onto the rotation axis
-        ang_vel_into_wall = np.dot(mtmR_ang_vel, u_rotation_axis)
-        torque_damping_R = kd_rot * ang_vel_into_wall * u_rotation_axis
+        torque_damping_R = kd_rot * mtmR_ang_vel # torque in same direction as mtmR
         return torque_damping_R # is a numpy array realtive to wire
    
     def transform_and_publish_wrench(self, max_force, max_torque, f_total_linear_L, f_total_linear_R, torque_total_L, torque_total_R): 
@@ -348,9 +344,9 @@ class WireTrackerNode(Node):
         
         angular_error_deg, u_tangent, u_ring_z, dot_product = self.compute_rotational_error(closest_t, T_ring_wire, winning_segment_points)
         torque_angular = self.compute_torque(angular_error_deg, u_tangent, u_ring_z, dot_product, kp_rot, angular_deadband)
-        torque_damping_L = self.compute_torque_damping_L(kd_rot, u_vector_ring_to_wire)
-        torque_damping_R = self.compute_torque_damping_R(kd_rot, u_vector_ring_to_wire)
-        torque_total_L = -torque_angular - torque_damping_L # negative torque angular to resist error rotation
+        torque_damping_L = self.compute_torque_damping_L(kd_rot)
+        torque_damping_R = self.compute_torque_damping_R(kd_rot)
+        torque_total_L = -torque_angular - torque_damping_L # negative torque angular to resist error rotation, negative dmaping roates in opposite direction of mtm
         torque_total_R = -torque_angular - torque_damping_R # negative torque angular to resist error rotation
 
         self.transform_and_publish_wrench(max_force, max_torque, f_total_linear_L, f_total_linear_R, torque_total_L, torque_total_R)  # Publish the total linear force to both MTMs
