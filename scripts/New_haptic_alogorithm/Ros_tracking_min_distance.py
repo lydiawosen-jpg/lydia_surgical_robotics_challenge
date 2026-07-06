@@ -242,8 +242,8 @@ class WireTrackerNode(Node):
         f_linear_damping_R = kd_pos * vel_into_wall * u_vector_ring_to_wire
         return f_linear_damping_R # is a numpy array realtive to wire
 
-   def compute_torque(self, angular_error_deg, u_tangent, u_ring_z, dot_product, kp_rot, angular_deadband):
-    if angular_error_deg < angular_deadband:
+    def compute_torque(self, angular_error_deg, u_tangent, u_ring_z, dot_product, kp_rot, angular_deadband):
+        if angular_error_deg < angular_deadband:
             torque_angular = np.array([0.0, 0.0, 0.0])
         else:
             # Calculate the axis of rotation for the angular error
@@ -256,7 +256,7 @@ class WireTrackerNode(Node):
 
             effective_angular_error_rad = np.radians(angular_error_deg - angular_deadband)
             torque_angular = kp_rot * effective_angular_error_rad * u_rotation_axis # torque is in direction of error
-    return torque_angular # is a numpy array realtive to wire
+        return torque_angular # is a numpy array realtive to wire
 
     def compute_torque_damping_L(self, kd_rot):
         mtmL_ang_vel = np.array([self.latest_twist_L.twist.angular.x, self.latest_twist_L.twist.angular.y, self.latest_twist_L.twist.angular.z])
