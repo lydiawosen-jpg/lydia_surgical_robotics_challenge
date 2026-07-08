@@ -311,7 +311,42 @@ class WireTrackerNode(Node):
         # else:
         #     self.wrench_pub_R.publish(zero_wrench)
          
+# ---------------------- COBI Flags ----------------------
+    def task_started(self):
+        if T_ring_wire.p.z() > 0.01 and min_distance < 0.005 and (self.ring_grasped_psm1 or self.ring_grasped_psm2):  # check thresholds
+            return True
 
+    def wire_touched(self):
+        if (self.ring_grasped_psm1 or self.ring_grasped_psm2) and :  # check thresholds
+            return True
+        return False  # Return False if the conditions are not met
+    
+    def ring_dropped(self):
+    
+    def task_ended(self):
+        if override_task_started == False:
+            if T_ring_wire.p.z() < 0.01 and min_distance < 0.005 and T_ring_wire.p.x() < -0.065: # check thresholds
+                return True
+        return False # do i need to add this return false
+
+
+override_task_started = True  # Initialize the override flag to True
+# should go in control loop: how do i  make it only send start flag once coud make z=number but might not get msg at that moment
+if self.task_started() and self.override_task_started:
+    client_socket.sendall(bytes(0))
+    override_task_started = False  # command to permannetly set to true
+    print("Task started")
+if self.wire_touched():
+    client_socket.sendall(bytes(1))
+    print("Wire touched")
+if self.ring_dropped():
+    client_socket.sendall(bytes(2))
+    print("Ring dropped")
+if self.task_ended():
+    client_socket.sendall(bytes(3))
+    print("Task ended")
+
+# ---------------------- Control Loop ----------------------
     def control_loop(self):
         max_force = 2.0 # N
         max_torque = 0.05 # N·m
