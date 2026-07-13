@@ -21,7 +21,7 @@ BODY base:
   scale: 1.0
   location:
     position:
-      x: 0.02773
+      x: 0.02682
       y: 0.17136
       z: 0.70981
     orientation:
@@ -78,8 +78,8 @@ BODY CameraFrame:
   location:
     position:
       x: 0.03065
-      y: 0.24923
-      z: 0.81246
+      y: 0.26016
+      z: 0.82528
     orientation:
       r: 0.70595
       p: -0.0
@@ -108,7 +108,7 @@ BODY ring_visual:
   scale: 1.0
   location:
     position:
-      x: 0.0663
+      x: 0.06538
       y: 0.16936
       z: 0.71372
     orientation:
@@ -164,7 +164,7 @@ BODY wire_visual:
   scale: 1.0
   location:
     position:
-      x: 0.06633
+      x: 0.06542
       y: 0.16946
       z: 0.71215
     orientation:
