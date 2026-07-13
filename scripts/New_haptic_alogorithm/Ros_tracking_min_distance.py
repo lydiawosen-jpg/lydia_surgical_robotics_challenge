@@ -311,26 +311,39 @@ class WireTrackerNode(Node):
         # else:
         #     self.wrench_pub_R.publish(zero_wrench)
          
+
+   # have another yaml file for contactsensor on ring, look at email adnan sent u, can make the cobi start running and stop      
 # ---------------------- COBI Flags ----------------------
-    def task_started(self):
+    def task_started(self, T_ring_wire, min_distance): # call this in control loop after the arguments are defined
         if T_ring_wire.p.z() > 0.01 and min_distance < 0.005 and (self.ring_grasped_psm1 or self.ring_grasped_psm2):  # check thresholds
-            return True
+            return True # make ghots object when passes through it itll report
+        else:
+            return False  
 
     def wire_touched(self):
         if (self.ring_grasped_psm1 or self.ring_grasped_psm2) and :  # check thresholds
-            return True
-        return False  # Return False if the conditions are not met
+            return True # attach contact sensor to ring
+        else:
+            return False  
     
     def ring_dropped(self):
+        if self.ring_grasped_psm1 or self.ring_grasped_psm2:
+            self.was_held = True
+        if self.was_held and not (self.ring_grasped_psm1 or self.ring_grasped_psm2):
+            return True
+        else:
+            return False  
     
-    def task_ended(self):
-        if override_task_started == False:
+    def task_ended(self, T_ring_wire, min_distance):
+        if self.override_task_started == False:
             if T_ring_wire.p.z() < 0.01 and min_distance < 0.005 and T_ring_wire.p.x() < -0.065: # check thresholds
                 return True
-        return False # do i need to add this return false
+        else:
+            return False
 
 
-override_task_started = True  # Initialize the override flag to True
+self.override_task_started = True  # Initialize the override flag to True
+self.was_held = False  # Initialize the was_held flag to False
 # should go in control loop: how do i  make it only send start flag once coud make z=number but might not get msg at that moment
 if self.task_started() and self.override_task_started:
     client_socket.sendall(bytes(0))

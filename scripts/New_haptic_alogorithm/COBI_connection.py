@@ -2,7 +2,7 @@
 import socket
 
 
-
+# import class from cobi script to ros script
 class COBIConnection:
     def __init__(self):
         host_ip = "10.162.34.171" # Linux desktop IP address
