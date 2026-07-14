@@ -52,13 +52,19 @@ class WireTrackerNode(Node):
         self.control_thread = threading.Thread(target=self.run_control_loop, daemon=True)
         self.control_thread.start()
 
-        self.start_marker_sent = False 
+        self.start_flag_sent = False 
         self.start_trigger = []
-        self.checkpoint1_data = []
-        self.checkpoint2_data  = []
-        self.checkpoint3_data  = []
-        self.checkpoint4_data  = []
-        self.checkpoint5_data  = []
+        self.checkpoint1 = []
+        self.checkpoint1_sent = False
+        self.checkpoint2 = []
+        self.checkpoint2_sent = False
+        self.checkpoint3 = []
+        self.checkpoint3_sent = False
+        self.checkpoint4 = []
+        self.checkpoint4_sent = False
+        self.checkpoint5 = []
+        self.checkpoint5_sent = False
+        self.ring_was_held = False
         self.end_trigger = []
         self.start_trigger_sub = self.create_subscription(GhostObjectState, '/ambf/env/phantom/start_trigger/State', self.start_trigger_callback, 1)
         self.checkpoint1_sub = self.create_subscription(GhostObjectState, '/ambf/env/phantom/checkpoint1/State', self.checkpoint1_callback, 1)
@@ -100,19 +106,19 @@ class WireTrackerNode(Node):
         self.start_trigger = msg.sensed_objects
     
     def checkpoint1_callback(self, msg):
-        self.checkpoint1_data  = msg.sensed_objects
+        self.checkpoint1  = msg.sensed_objects
     
     def checkpoint2_callback(self, msg):
-        self.checkpoint2_data  = msg.sensed_objects
+        self.checkpoint2  = msg.sensed_objects
     
     def checkpoint3_callback(self, msg):
-        self.checkpoint3_data  = msg.sensed_objects
+        self.checkpoint3  = msg.sensed_objects
     
     def checkpoint4_callback(self, msg):
-        self.checkpoint4_data  = msg.sensed_objects
+        self.checkpoint4  = msg.sensed_objects
     
     def checkpoint5_callback(self, msg):
-        self.checkpoint5_data  = msg.sensed_objects
+        self.checkpoint5  = msg.sensed_objects
     
     def end_trigger_callback(self, msg):
         self.end_trigger = msg.sensed_objects
@@ -353,66 +359,63 @@ class WireTrackerNode(Node):
     def task_started(self, min_distance): # call this in control loop after the arguments are defined
         start_ring_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.start_trigger)
         if start_ring_sensed and min_distance < 0.005 and (self.ring_grasped_psm1 or self.ring_grasped_psm2):  # check thresholds
-            return True # make ghots object when passes through it itll report
+            return True
         return False  
 
-    def checkpoint1(self, min_distance):
-        checkpoint1_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.checkpoint1_data ) # ask adnan if better to out in control or make this a def
-        if checkpoint1_sensed and min_distance < 0.005: 
+    def checkpoint1_passed(self, min_distance):
+        checkpoint1_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.checkpoint1)
+        if checkpoint1_sensed and min_distance < 0.005 and self.start_flag_sent: 
             return True
         return False
 
-    def checkpoint2(self, min_distance):
-        checkpoint2_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.checkpoint2_data )
-        if checkpoint2_sensed and min_distance < 0.005: 
+    def checkpoint2_passed(self, min_distance):
+        checkpoint2_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.checkpoint2)
+        if checkpoint2_sensed and min_distance < 0.005 and self.start_flag_sent: 
             return True
         return False
 
-    def checkpoint3(self, min_distance):
-        checkpoint3_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.checkpoint3_data )
-        if checkpoint3_sensed and min_distance < 0.005: 
+    def checkpoint3_passed(self, min_distance):
+        checkpoint3_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.checkpoint3)
+        if checkpoint3_sensed and min_distance < 0.005 and self.start_flag_sent: 
             return True
         return False
     
-    def checkpoint4(self, min_distance):
-        checkpoint4_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.checkpoint4_data )
-        if checkpoint4_sensed and min_distance < 0.005: 
+    def checkpoint4_passed(self, min_distance):
+        checkpoint4_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.checkpoint4)
+        if checkpoint4_sensed and min_distance < 0.005 and self.start_flag_sent: 
             return True
         return False
 
-    def checkpoint5(self, min_distance):
-        checkpoint5_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.checkpoint5_data )
-        if checkpoint5_sensed and min_distance < 0.005: 
+    def checkpoint5_passed(self, min_distance):
+        checkpoint5_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.checkpoint5)
+        if checkpoint5_sensed and min_distance < 0.005 and self.start_flag_sent: 
             return True
         return False
 
     # def wire_touched(self):
-    #     if (self.ring_grasped_psm1 or self.ring_grasped_psm2) and :  # check thresholds
+    #     if (self.ring_grasped_psm1 or self.ring_grasped_psm2) and not self.task_ended(min_distance):  # check thresholds
     #         return True # attach contact sensor to ring
     #     else:
     #         return False  
     
-    def ring_dropped(self):
+    def ring_dropped(self, min_distance):
         if self.ring_grasped_psm1 or self.ring_grasped_psm2:
-            self.was_held = True
-        if self.was_held and not (self.ring_grasped_psm1 or self.ring_grasped_psm2):
+            self.ring_was_held = True
+        if self.ring_was_held and not (self.ring_grasped_psm1 or self.ring_grasped_psm2) and self.start_flag_sent and not self.task_ended(min_distance):
             return True
         return False  
     
     def task_ended(self, min_distance):
-        if self.start_marker_sent == True: # should i put this line in every def flag?
+        if self.start_flag_sent == True:
             end_ring_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.end_trigger)
             if end_ring_sensed and min_distance < 0.005: # check thresholds, should they have to hold ring as passing ending
                 return True
             return False
 
-
-
-# self.was_held = False  # Initialize the was_held flag to False
-# should go in control loop: how do i  make it only send start flag once coud make z=number but might not get msg at that moment
-# if self.task_started() and self.start_marker_sent:
+# should go in control loop:
+# if self.task_started() and self.start_flag_sent:
 #     client_socket.sendall(bytes(0))
-#     self.start_marker_sent = False  # command to permannetly set to true
+#     self.start_flag_sent = False  # command to permannetly set to true
 #     print("Task started")
 # if self.wire_touched():
 #     client_socket.sendall(bytes(1))
@@ -463,20 +466,27 @@ class WireTrackerNode(Node):
 
         #self.transform_and_publish_wrench(max_force, max_torque, f_total_linear_L, f_total_linear_R, torque_total_L, torque_total_R)  # Publish the total linear force to both MTMs
     
-        if self.task_started(min_distance) and not self.start_marker_sent:
+        if self.task_started(min_distance) and not self.start_flag_sent:
             #client_socket.sendall(bytes(0))
-            self.start_marker_sent = True  # command to permannetly set to true
-            print("Task started")
-        if self.checkpoint1(min_distance) and self.start_marker_sent:
+            self.start_flag_sent = True 
+            print("Task Started")
+        if self.checkpoint1_passed(min_distance) and not self.checkpoint1_sent:
+            self.checkpoint1_sent = True
             print("Passed checkpoint 1")
-        if self.checkpoint2(min_distance) and self.start_marker_sent:
+        if self.checkpoint2_passed(min_distance) and not self.checkpoint2_sent:
+            self.checkpoint2_sent = True
             print("Passed checkpoint 2")
-        if self.checkpoint3(min_distance) and self.start_marker_sent:
+        if self.checkpoint3_passed(min_distance) and not self.checkpoint3_sent:
+            self.checkpoint3_sent = True
             print("Passed checkpoint 3")
-        if self.checkpoint4(min_distance) and self.start_marker_sent:
+        if self.checkpoint4_passed(min_distance) and not self.checkpoint4_sent:
+            self.checkpoint4_sent = True
             print("Passed checkpoint 4")
-        if self.checkpoint5(min_distance) and self.start_marker_sent:
+        if self.checkpoint5_passed(min_distance) and not self.checkpoint5_sent:
+            self.checkpoint5_sent = True
             print("Passed checkpoint 5")
+        if self.ring_dropped(min_distance): # test on dvrk if this sends multiple messages during one action of dropping
+            print("Ring Dropped")
         if self.task_ended(min_distance):
             print("Task Ended")
 
