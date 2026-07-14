@@ -7,7 +7,7 @@ import rclpy
 import threading
 import time
 from rclpy.node import Node
-from ambf_msgs.msg import RigidBodyState, RigidBodyCmd, ActuatorCmd
+from ambf_msgs.msg import RigidBodyState, RigidBodyCmd, ActuatorCmd, SensorState
 from scipy.optimize import minimize_scalar, OptimizeResult
 from rclpy.executors import MultiThreadedExecutor
 from geometry_msgs.msg import WrenchStamped, TwistStamped
@@ -52,6 +52,14 @@ class WireTrackerNode(Node):
         self.control_thread = threading.Thread(target=self.run_control_loop, daemon=True)
         self.control_thread.start()
 
+        self.start_trigger_sub = self.create_subscription(SensorState, '/ambf/env/phantom/start_trigger/State', self.start_trigger_callback, 1)
+        self.checkpoint1_sub = self.create_subscription(SensorState, '/ambf/env/phantom/checkpoint1/State', self.checkpoint1_callback, 1)
+        self.checkpoint2_sub = self.create_subscription(SensorState, '/ambf/env/phantom/checkpoint2/State', self.checkpoint2_callback, 1)
+        self.checkpoint3_sub = self.create_subscription(SensorState, '/ambf/env/phantom/checkpoint3/State', self.checkpoint3_callback, 1)
+        self.checkpoint4_sub = self.create_subscription(SensorState, '/ambf/env/phantom/checkpoint4/State', self.checkpoint4_callback, 1)
+        self.checkpoint5_sub = self.create_subscription(SensorState, '/ambf/env/phantom/checkpoint5/State', self.checkpoint5_callback, 1)
+        self.end_trigger_sub = self.create_subscription(SensorState, '/ambf/env/phantom/end_trigger/State', self.end_trigger_callback, 1)
+
         self.psm1_grasp_sub = self.create_subscription( ActuatorCmd, "/ambf/env/ghosts/psm1/Actuator0/Command", self.grasp_psm1_callback, 1)
         self.psm2_grasp_sub = self.create_subscription( ActuatorCmd, "/ambf/env/ghosts/psm2/Actuator0/Command", self.grasp_psm2_callback, 1)
 
@@ -80,6 +88,26 @@ class WireTrackerNode(Node):
         self.orientation_abs_pub_L.publish(abs_flag)
         self.orientation_abs_pub_R.publish(abs_flag)   
 
+    def start_trigger_callback(self, msg):
+        self.start_trigger = msg.sensed_objects
+    
+    def checkpoint1_callback(self, msg):
+        self.checkpoint1 = msg.sensed_objects
+    
+    def checkpoint2_callback(self, msg):
+        self.checkpoint2 = msg.sensed_objects
+    
+    def checkpoint3_callback(self, msg):
+        self.checkpoint3 = msg.sensed_objects
+    
+    def checkpoint4_callback(self, msg):
+        self.checkpoint4 = msg.sensed_objects
+    
+    def checkpoint5_callback(self, msg):
+        self.checkpoint5 = msg.sensed_objects
+    
+    def end_trigger_callback(self, msg):
+        self.end_trigger = msg.sensed_objects
 
     def grasp_psm1_callback(self, msg):
         self.ring_grasped_psm1 = msg.actuate 
@@ -314,11 +342,19 @@ class WireTrackerNode(Node):
 
    # have another yaml file for contactsensor on ring, look at email adnan sent u, can make the cobi start running and stop      
 # ---------------------- COBI Flags ----------------------
-    def task_started(self, T_ring_wire, min_distance): # call this in control loop after the arguments are defined
-        if T_ring_wire.p.z() > 0.01 and min_distance < 0.005 and (self.ring_grasped_psm1 or self.ring_grasped_psm2):  # check thresholds
+    def task_started(self, min_distance): # call this in control loop after the arguments are defined
+        start_ring_sensed = any("ring" in obj for obj in self.start_trigger)
+        if start_ring_sensed and min_distance < 0.005 and (self.ring_grasped_psm1 or self.ring_grasped_psm2):  # check thresholds
             return True # make ghots object when passes through it itll report
         else:
             return False  
+
+    def checkpoint1(self, min_distance):
+        checkpoint1_sensed = any("ring" in obj for obj in self.checkpoint1) # ask adnan if better to out in control or make this a def
+        if checkpoint1_sensed and min_distance < 0.005: 
+            return True
+        else:
+            return False
 
     def wire_touched(self):
         if (self.ring_grasped_psm1 or self.ring_grasped_psm2) and :  # check thresholds
@@ -334,9 +370,10 @@ class WireTrackerNode(Node):
         else:
             return False  
     
-    def task_ended(self, T_ring_wire, min_distance):
+    def task_ended(self, min_distance):
         if self.override_task_started == False:
-            if T_ring_wire.p.z() < 0.01 and min_distance < 0.005 and T_ring_wire.p.x() < -0.065: # check thresholds
+            end_ring_sensed = any("ring" in obj for obj in self.end_trigger)
+            if end_ring_sensed and min_distance < 0.005: # check thresholds, should they have to hold ring as passing ending
                 return True
         else:
             return False
