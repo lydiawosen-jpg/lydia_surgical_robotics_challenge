@@ -7,7 +7,7 @@ import rclpy
 import threading
 import time
 from rclpy.node import Node
-from ambf_msgs.msg import RigidBodyState, RigidBodyCmd, ActuatorCmd, SensorState
+from ambf_msgs.msg import RigidBodyState, RigidBodyCmd, ActuatorCmd, GhostObjectState
 from scipy.optimize import minimize_scalar, OptimizeResult
 from rclpy.executors import MultiThreadedExecutor
 from geometry_msgs.msg import WrenchStamped, TwistStamped
@@ -52,13 +52,21 @@ class WireTrackerNode(Node):
         self.control_thread = threading.Thread(target=self.run_control_loop, daemon=True)
         self.control_thread.start()
 
-        self.start_trigger_sub = self.create_subscription(SensorState, '/ambf/env/phantom/start_trigger/State', self.start_trigger_callback, 1)
-        self.checkpoint1_sub = self.create_subscription(SensorState, '/ambf/env/phantom/checkpoint1/State', self.checkpoint1_callback, 1)
-        self.checkpoint2_sub = self.create_subscription(SensorState, '/ambf/env/phantom/checkpoint2/State', self.checkpoint2_callback, 1)
-        self.checkpoint3_sub = self.create_subscription(SensorState, '/ambf/env/phantom/checkpoint3/State', self.checkpoint3_callback, 1)
-        self.checkpoint4_sub = self.create_subscription(SensorState, '/ambf/env/phantom/checkpoint4/State', self.checkpoint4_callback, 1)
-        self.checkpoint5_sub = self.create_subscription(SensorState, '/ambf/env/phantom/checkpoint5/State', self.checkpoint5_callback, 1)
-        self.end_trigger_sub = self.create_subscription(SensorState, '/ambf/env/phantom/end_trigger/State', self.end_trigger_callback, 1)
+        self.start_marker_sent = False 
+        self.start_trigger = []
+        self.checkpoint1 = []
+        self.checkpoint2 = []
+        self.checkpoint3 = []
+        self.checkpoint4 = []
+        self.checkpoint5 = []
+        self.end_trigger = []
+        self.start_trigger_sub = self.create_subscription(GhostObjectState, '/ambf/env/phantom/start_trigger/State', self.start_trigger_callback, 1)
+        self.checkpoint1_sub = self.create_subscription(GhostObjectState, '/ambf/env/phantom/checkpoint1/State', self.checkpoint1_callback, 1)
+        self.checkpoint2_sub = self.create_subscription(GhostObjectState, '/ambf/env/phantom/checkpoint2/State', self.checkpoint2_callback, 1)
+        self.checkpoint3_sub = self.create_subscription(GhostObjectState, '/ambf/env/phantom/checkpoint3/State', self.checkpoint3_callback, 1)
+        self.checkpoint4_sub = self.create_subscription(GhostObjectState, '/ambf/env/phantom/checkpoint4/State', self.checkpoint4_callback, 1)
+        self.checkpoint5_sub = self.create_subscription(GhostObjectState, '/ambf/env/phantom/checkpoint5/State', self.checkpoint5_callback, 1)
+        self.end_trigger_sub = self.create_subscription(GhostObjectState, '/ambf/env/phantom/end_trigger/State', self.end_trigger_callback, 1)
 
         self.psm1_grasp_sub = self.create_subscription( ActuatorCmd, "/ambf/env/ghosts/psm1/Actuator0/Command", self.grasp_psm1_callback, 1)
         self.psm2_grasp_sub = self.create_subscription( ActuatorCmd, "/ambf/env/ghosts/psm2/Actuator0/Command", self.grasp_psm2_callback, 1)
@@ -195,13 +203,13 @@ class WireTrackerNode(Node):
                 
         # EXTRACT LIVE RESULTS
         closest_t = final_result.x
-        print(f"t value: {final_result.x}")
+        #print(f"t value: {final_result.x}")
         min_distance = final_result.fun
         closest_wire_point = get_bezier_point(closest_t, *winning_segment_points)
         
         # Print out your live tracking coordinates to the terminal window
         #self.get_logger().info(f"Shortest Distance: {min_distance:.4f}m | Wire XYZ: {closest_wire_point}")
-        print(f"Shortest Distance: {min_distance:.4f}m | Wire XYZ: {closest_wire_point}")
+        #print(f"Shortest Distance: {min_distance:.4f}m | Wire XYZ: {closest_wire_point}")
 
         return closest_t, min_distance, closest_wire_point, winning_segment_points
         
@@ -343,58 +351,78 @@ class WireTrackerNode(Node):
    # have another yaml file for contactsensor on ring, look at email adnan sent u, can make the cobi start running and stop      
 # ---------------------- COBI Flags ----------------------
     def task_started(self, min_distance): # call this in control loop after the arguments are defined
-        start_ring_sensed = any("ring" in obj for obj in self.start_trigger)
+        start_ring_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.start_trigger)
         if start_ring_sensed and min_distance < 0.005 and (self.ring_grasped_psm1 or self.ring_grasped_psm2):  # check thresholds
             return True # make ghots object when passes through it itll report
-        else:
-            return False  
+        return False  
 
     def checkpoint1(self, min_distance):
-        checkpoint1_sensed = any("ring" in obj for obj in self.checkpoint1) # ask adnan if better to out in control or make this a def
+        checkpoint1_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.checkpoint1) # ask adnan if better to out in control or make this a def
         if checkpoint1_sensed and min_distance < 0.005: 
             return True
-        else:
-            return False
+        return False
 
-    def wire_touched(self):
-        if (self.ring_grasped_psm1 or self.ring_grasped_psm2) and :  # check thresholds
-            return True # attach contact sensor to ring
-        else:
-            return False  
+    def checkpoint2(self, min_distance):
+        checkpoint2_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.checkpoint2)
+        if checkpoint2_sensed and min_distance < 0.005: 
+            return True
+        return False
+
+    def checkpoint3(self, min_distance):
+        checkpoint3_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.checkpoint3)
+        if checkpoint3_sensed and min_distance < 0.005: 
+            return True
+        return False
+    
+    def checkpoint4(self, min_distance):
+        checkpoint4_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.checkpoint4)
+        if checkpoint4_sensed and min_distance < 0.005: 
+            return True
+        return False
+
+    def checkpoint5(self, min_distance):
+        checkpoint5_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.checkpoint5)
+        if checkpoint5_sensed and min_distance < 0.005: 
+            return True
+        return False
+
+    # def wire_touched(self):
+    #     if (self.ring_grasped_psm1 or self.ring_grasped_psm2) and :  # check thresholds
+    #         return True # attach contact sensor to ring
+    #     else:
+    #         return False  
     
     def ring_dropped(self):
         if self.ring_grasped_psm1 or self.ring_grasped_psm2:
             self.was_held = True
         if self.was_held and not (self.ring_grasped_psm1 or self.ring_grasped_psm2):
             return True
-        else:
-            return False  
+        return False  
     
     def task_ended(self, min_distance):
-        if self.override_task_started == False:
-            end_ring_sensed = any("ring" in obj for obj in self.end_trigger)
+        if self.start_marker_sent == True: # should i put this line in every def flag?
+            end_ring_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.end_trigger)
             if end_ring_sensed and min_distance < 0.005: # check thresholds, should they have to hold ring as passing ending
                 return True
-        else:
             return False
 
 
-self.override_task_started = True  # Initialize the override flag to True
-self.was_held = False  # Initialize the was_held flag to False
+
+# self.was_held = False  # Initialize the was_held flag to False
 # should go in control loop: how do i  make it only send start flag once coud make z=number but might not get msg at that moment
-if self.task_started() and self.override_task_started:
-    client_socket.sendall(bytes(0))
-    override_task_started = False  # command to permannetly set to true
-    print("Task started")
-if self.wire_touched():
-    client_socket.sendall(bytes(1))
-    print("Wire touched")
-if self.ring_dropped():
-    client_socket.sendall(bytes(2))
-    print("Ring dropped")
-if self.task_ended():
-    client_socket.sendall(bytes(3))
-    print("Task ended")
+# if self.task_started() and self.start_marker_sent:
+#     client_socket.sendall(bytes(0))
+#     self.start_marker_sent = False  # command to permannetly set to true
+#     print("Task started")
+# if self.wire_touched():
+#     client_socket.sendall(bytes(1))
+#     print("Wire touched")
+# if self.ring_dropped():
+#     client_socket.sendall(bytes(2))
+#     print("Ring dropped")
+# if self.task_ended():
+#     client_socket.sendall(bytes(3))
+#     print("Task ended")
 
 # ---------------------- Control Loop ----------------------
     def control_loop(self):
@@ -433,7 +461,24 @@ if self.task_ended():
         torque_total_L = -torque_angular - torque_damping_L # negative torque angular to resist error rotation, negative dmaping roates in opposite direction of mtm
         torque_total_R = -torque_angular - torque_damping_R # negative torque angular to resist error rotation
 
-        self.transform_and_publish_wrench(max_force, max_torque, f_total_linear_L, f_total_linear_R, torque_total_L, torque_total_R)  # Publish the total linear force to both MTMs
+        #self.transform_and_publish_wrench(max_force, max_torque, f_total_linear_L, f_total_linear_R, torque_total_L, torque_total_R)  # Publish the total linear force to both MTMs
+    
+        if self.task_started(min_distance) and not self.start_marker_sent:
+            #client_socket.sendall(bytes(0))
+            self.start_marker_sent = True  # command to permannetly set to true
+            print("Task started")
+        if self.checkpoint1(min_distance) and self.start_marker_sent:
+            print("Passed checkpoint 1")
+        if self.checkpoint2(min_distance) and self.start_marker_sent:
+            print("Passed checkpoint 2")
+        if self.checkpoint3(min_distance) and self.start_marker_sent:
+            print("Passed checkpoint 3")
+        if self.checkpoint4(min_distance) and self.start_marker_sent:
+            print("Passed checkpoint 4")
+        if self.checkpoint5(min_distance) and self.start_marker_sent:
+            print("Passed checkpoint 5")
+        if task_ended(min_distance):
+            print("Task Ended")
 
     def run_control_loop(self):
         t1 = datetime.now()
@@ -443,7 +488,7 @@ if self.task_ended():
             self.control_loop()
             time.sleep(period) # limits updates to realistically set frequency
             t2 = datetime.now()
-            print("\t ***Delta T (seconds):", (t2 - t1).total_seconds())
+            #print("\t ***Delta T (seconds):", (t2 - t1).total_seconds())
             t1 = t2 
 
 
