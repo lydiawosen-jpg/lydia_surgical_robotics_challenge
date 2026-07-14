@@ -54,11 +54,11 @@ class WireTrackerNode(Node):
 
         self.start_marker_sent = False 
         self.start_trigger = []
-        self.checkpoint1 = []
-        self.checkpoint2 = []
-        self.checkpoint3 = []
-        self.checkpoint4 = []
-        self.checkpoint5 = []
+        self.checkpoint1_data = []
+        self.checkpoint2_data  = []
+        self.checkpoint3_data  = []
+        self.checkpoint4_data  = []
+        self.checkpoint5_data  = []
         self.end_trigger = []
         self.start_trigger_sub = self.create_subscription(GhostObjectState, '/ambf/env/phantom/start_trigger/State', self.start_trigger_callback, 1)
         self.checkpoint1_sub = self.create_subscription(GhostObjectState, '/ambf/env/phantom/checkpoint1/State', self.checkpoint1_callback, 1)
@@ -100,19 +100,19 @@ class WireTrackerNode(Node):
         self.start_trigger = msg.sensed_objects
     
     def checkpoint1_callback(self, msg):
-        self.checkpoint1 = msg.sensed_objects
+        self.checkpoint1_data  = msg.sensed_objects
     
     def checkpoint2_callback(self, msg):
-        self.checkpoint2 = msg.sensed_objects
+        self.checkpoint2_data  = msg.sensed_objects
     
     def checkpoint3_callback(self, msg):
-        self.checkpoint3 = msg.sensed_objects
+        self.checkpoint3_data  = msg.sensed_objects
     
     def checkpoint4_callback(self, msg):
-        self.checkpoint4 = msg.sensed_objects
+        self.checkpoint4_data  = msg.sensed_objects
     
     def checkpoint5_callback(self, msg):
-        self.checkpoint5 = msg.sensed_objects
+        self.checkpoint5_data  = msg.sensed_objects
     
     def end_trigger_callback(self, msg):
         self.end_trigger = msg.sensed_objects
@@ -357,31 +357,31 @@ class WireTrackerNode(Node):
         return False  
 
     def checkpoint1(self, min_distance):
-        checkpoint1_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.checkpoint1) # ask adnan if better to out in control or make this a def
+        checkpoint1_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.checkpoint1_data ) # ask adnan if better to out in control or make this a def
         if checkpoint1_sensed and min_distance < 0.005: 
             return True
         return False
 
     def checkpoint2(self, min_distance):
-        checkpoint2_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.checkpoint2)
+        checkpoint2_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.checkpoint2_data )
         if checkpoint2_sensed and min_distance < 0.005: 
             return True
         return False
 
     def checkpoint3(self, min_distance):
-        checkpoint3_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.checkpoint3)
+        checkpoint3_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.checkpoint3_data )
         if checkpoint3_sensed and min_distance < 0.005: 
             return True
         return False
     
     def checkpoint4(self, min_distance):
-        checkpoint4_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.checkpoint4)
+        checkpoint4_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.checkpoint4_data )
         if checkpoint4_sensed and min_distance < 0.005: 
             return True
         return False
 
     def checkpoint5(self, min_distance):
-        checkpoint5_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.checkpoint5)
+        checkpoint5_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.checkpoint5_data )
         if checkpoint5_sensed and min_distance < 0.005: 
             return True
         return False
@@ -477,7 +477,7 @@ class WireTrackerNode(Node):
             print("Passed checkpoint 4")
         if self.checkpoint5(min_distance) and self.start_marker_sent:
             print("Passed checkpoint 5")
-        if task_ended(min_distance):
+        if self.task_ended(min_distance):
             print("Task Ended")
 
     def run_control_loop(self):
