@@ -7,7 +7,7 @@ import rclpy
 import threading
 import time
 from rclpy.node import Node
-from ambf_msgs.msg import RigidBodyState, RigidBodyCmd, ActuatorCmd, GhostObjectState
+from ambf_msgs.msg import RigidBodyState, RigidBodyCmd, ActuatorCmd, GhostObjectState, SensorState
 from scipy.optimize import minimize_scalar, OptimizeResult
 from rclpy.executors import MultiThreadedExecutor
 from geometry_msgs.msg import WrenchStamped, TwistStamped
@@ -67,12 +67,14 @@ class WireTrackerNode(Node):
         self.ring_was_held = False
         self.end_trigger = []
         self.start_trigger_sub = self.create_subscription(GhostObjectState, '/ambf/env/phantom/start_trigger/State', self.start_trigger_callback, 1)
-        self.checkpoint1_sub = self.create_subscription(GhostObjectState, '/ambf/env/phantom/checkpoint1/State', self.checkpoint1_callback, 1)
+        self.checkpoint1_sub = self.create_subscription(GhostObjectState, '/ambf/env/phantom/checkpoint1/State', self.checkpoint1_callback, 1) # can use partial to consolodate callbacks
         self.checkpoint2_sub = self.create_subscription(GhostObjectState, '/ambf/env/phantom/checkpoint2/State', self.checkpoint2_callback, 1)
         self.checkpoint3_sub = self.create_subscription(GhostObjectState, '/ambf/env/phantom/checkpoint3/State', self.checkpoint3_callback, 1)
         self.checkpoint4_sub = self.create_subscription(GhostObjectState, '/ambf/env/phantom/checkpoint4/State', self.checkpoint4_callback, 1)
         self.checkpoint5_sub = self.create_subscription(GhostObjectState, '/ambf/env/phantom/checkpoint5/State', self.checkpoint5_callback, 1)
         self.end_trigger_sub = self.create_subscription(GhostObjectState, '/ambf/env/phantom/end_trigger/State', self.end_trigger_callback, 1)
+
+        self.ring_contact_sensor_sub = self.create_subscription(SensorState, '/ambf/env/phantom/ring_contact_sensor/State', self.ring_contact_sensor_callback, 1)
 
         self.psm1_grasp_sub = self.create_subscription( ActuatorCmd, "/ambf/env/ghosts/psm1/Actuator0/Command", self.grasp_psm1_callback, 1)
         self.psm2_grasp_sub = self.create_subscription( ActuatorCmd, "/ambf/env/ghosts/psm2/Actuator0/Command", self.grasp_psm2_callback, 1)
@@ -102,11 +104,25 @@ class WireTrackerNode(Node):
         self.orientation_abs_pub_L.publish(abs_flag)
         self.orientation_abs_pub_R.publish(abs_flag)   
 
+    def ring_contact_sensor_callback(self, msg):
+        # Initialize an empty list to store the names
+        sensed_objects = []
+        
+        # Check if contact_events has any items and loop through them
+        if msg.contact_events:
+            for event in msg.contact_events:
+                # Extract the name as a clean string and add it to our list
+                object_name_str = event.object_name.data
+                sensed_objects.append(object_name_str)
+                
+        # Save the final list of strings to your class variable
+        self.ring_contact_sensor = sensed_objects
+    
     def start_trigger_callback(self, msg):
         self.start_trigger = msg.sensed_objects
     
-    def checkpoint1_callback(self, msg):
-        self.checkpoint1  = msg.sensed_objects
+    def checkpoint_callback(self, msg, number):
+        self.checkpoint[number]  = msg.sensed_objects
     
     def checkpoint2_callback(self, msg):
         self.checkpoint2  = msg.sensed_objects
@@ -392,11 +408,10 @@ class WireTrackerNode(Node):
             return True
         return False
 
-    # def wire_touched(self):
-    #     if (self.ring_grasped_psm1 or self.ring_grasped_psm2) and not self.task_ended(min_distance):  # check thresholds
-    #         return True # attach contact sensor to ring
-    #     else:
-    #         return False  
+    def wire_touched(self, min_distance):
+        if "wire" in self.ring_contact_sensor and (self.ring_grasped_psm1 or self.ring_grasped_psm2) and not self.task_ended(min_distance):
+            return True
+        return False  
     
     def ring_dropped(self, min_distance):
         if self.ring_grasped_psm1 or self.ring_grasped_psm2:
@@ -408,7 +423,7 @@ class WireTrackerNode(Node):
     def task_ended(self, min_distance):
         if self.start_flag_sent == True:
             end_ring_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.end_trigger)
-            if end_ring_sensed and min_distance < 0.005: # check thresholds, should they have to hold ring as passing ending
+            if end_ring_sensed and min_distance < 0.005: # check thresholds, should they have to hold ring as passing ending, defin threshold at top of class and make capital
                 return True
             return False
 
@@ -470,7 +485,7 @@ class WireTrackerNode(Node):
             #client_socket.sendall(bytes(0))
             self.start_flag_sent = True 
             print("Task Started")
-        if self.checkpoint1_passed(min_distance) and not self.checkpoint1_sent:
+        if self.checkpoint1_passed(min_distance) and not self.checkpoint1_sent: # can make list of these checkpoint and run through them
             self.checkpoint1_sent = True
             print("Passed checkpoint 1")
         if self.checkpoint2_passed(min_distance) and not self.checkpoint2_sent:
@@ -487,6 +502,8 @@ class WireTrackerNode(Node):
             print("Passed checkpoint 5")
         if self.ring_dropped(min_distance): # test on dvrk if this sends multiple messages during one action of dropping
             print("Ring Dropped")
+        if self.wire_touched(min_distance):
+            print("Wire Touched")
         if self.task_ended(min_distance):
             print("Task Ended")
 

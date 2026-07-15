@@ -13,9 +13,11 @@ ghost objects:
 - BODY start_trigger
 soft bodies: []
 joints: []
-cameras: []
+cameras:
+- camera
 lights: []
-sensors: []
+sensors:
+- SENSOR ring_contact_sensor
 actuators: []
 high resolution path: high_res/
 low resolution path: low_res/
@@ -76,6 +78,35 @@ BODY base:
       g: 0.4
       r: 0.4
     transparency: 1.0
+camera:
+  name: camera
+  location:
+    x: 0.02921
+    y: 0.34556
+    z: 0.77166
+  look at:
+    x: 0.065
+    y: -0.63501
+    z: 0.5788
+  up:
+    x: 0.00703
+    y: -0.19273
+    z: 0.98123
+  clipping plane:
+    far: 1000.0
+    near: 0.10000000149011612
+  field view angle: 0.6911112070083618
+  monitor: 0
+  publish image: false
+  publish image interval: 1
+  publish image resolution:
+    height: 480
+    width: 640
+  publish depth: false
+  publish depth interval: 1
+  publish depth resolution:
+    height: 480
+    width: 640
 BODY CameraFrame:
   name: CameraFrame
   mesh: ''
@@ -316,6 +347,47 @@ BODY checkpoint5:
       r: 0.5
     transparency: 1.0
   transparency: 1.0
+BODY end_trigger:
+  name: end_trigger
+  parent: ''
+  mesh: end_trigger.OBJ
+  shape: BOX
+  geometry:
+    x: 0.0010012589627876878
+    y: 0.0010225210571661592
+    z: 0.0007115344051271677
+  location:
+    orientation:
+      p: -0.0
+      r: 0.0
+      y: 0.0
+    position:
+      x: -0.00224
+      y: 0.17473
+      z: 0.727
+  scale: 1.0
+  passive: false
+  collision mesh type: CONVEX_HULL
+  collision margin: 0.001
+  collision group: []
+  collision shape: BOX
+  collision geometry:
+    x: 0.0
+    y: 0.0
+    z: 0.0
+  color components:
+    ambient:
+      level: 1.0
+    diffuse:
+      b: 0.5
+      g: 0.5
+      r: 0.5
+    specular:
+      b: 0.05000000074505806
+      g: 0.05000000074505806
+      r: 0.5
+    transparency: 1.0
+  transparency: 1.0
 BODY ring_visual:
   name: ring_visual
   mesh: ring_visual.OBJ
@@ -368,47 +440,23 @@ BODY ring_visual:
       g: 0.4
       r: 0.4
     transparency: 1.0
-BODY end_trigger:
-  name: end_trigger
-  parent: ''
-  mesh: end_trigger.OBJ
-  shape: BOX
-  geometry:
-    x: 0.0010012589627876878
-    y: 0.0010225210571661592
-    z: 0.0007115344051271677
+SENSOR ring_contact_sensor:
+  name: ring_contact_sensor
+  type: Contact
+  parent: 'ring_visual'
   location:
     orientation:
       p: -0.0
       r: 0.0
       y: 0.0
     position:
-      x: -0.00224
-      y: 0.17473
-      z: 0.727
-  scale: 1.0
-  passive: false
-  collision mesh type: CONVEX_HULL
-  collision margin: 0.001
-  collision group: []
-  collision shape: BOX
-  collision geometry:
-    x: 0.0
-    y: 0.0
-    z: 0.0
-  color components:
-    ambient:
-      level: 1.0
-    diffuse:
-      b: 0.5
-      g: 0.5
-      r: 0.5
-    specular:
-      b: 0.05000000074505806
-      g: 0.05000000074505806
-      r: 0.5
-    transparency: 1.0
-  transparency: 1.0
+      x: 0.0
+      y: 0.0
+      z: 0.0
+  visible: true
+  visible size: 0.004999999888241291
+  distance threshold: 0.001
+  process contact details: false
 BODY start_trigger:
   name: start_trigger
   parent: ''
