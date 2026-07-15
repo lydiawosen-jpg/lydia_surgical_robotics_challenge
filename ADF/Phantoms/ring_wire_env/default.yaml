@@ -167,9 +167,9 @@ BODY checkpoint1:
   collision group: []
   collision shape: BOX
   collision geometry:
-    x: 0.0
-    y: 0.0
-    z: 0.0
+    x: 0.0085
+    y: 0.0085
+    z: 0.00077
   color components:
     ambient:
       level: 1.0
@@ -208,9 +208,9 @@ BODY checkpoint2:
   collision group: []
   collision shape: BOX
   collision geometry:
-    x: 0.0
-    y: 0.0
-    z: 0.0
+    x: 0.0085
+    y: 0.0085
+    z: 0.00077
   color components:
     ambient:
       level: 1.0
@@ -249,9 +249,9 @@ BODY checkpoint3:
   collision group: []
   collision shape: BOX
   collision geometry:
-    x: 0.0
-    y: 0.0
-    z: 0.0
+    x: 0.0085
+    y: 0.0085
+    z: 0.00077
   color components:
     ambient:
       level: 1.0
@@ -290,9 +290,9 @@ BODY checkpoint4:
   collision group: []
   collision shape: BOX
   collision geometry:
-    x: 0.0
-    y: 0.0
-    z: 0.0
+    x: 0.0085
+    y: 0.0085
+    z: 0.00077
   color components:
     ambient:
       level: 1.0
@@ -331,9 +331,9 @@ BODY checkpoint5:
   collision group: []
   collision shape: BOX
   collision geometry:
-    x: 0.0
-    y: 0.0
-    z: 0.0
+    x: 0.0085
+    y: 0.0085
+    z: 0.00077
   color components:
     ambient:
       level: 1.0
@@ -372,9 +372,9 @@ BODY end_trigger:
   collision group: []
   collision shape: BOX
   collision geometry:
-    x: 0.0
-    y: 0.0
-    z: 0.0
+    x: 0.0085
+    y: 0.0085
+    z: 0.00077
   color components:
     ambient:
       level: 1.0
@@ -482,9 +482,9 @@ BODY start_trigger:
   collision group: []
   collision shape: BOX
   collision geometry:
-    x: 0.0
-    y: 0.0
-    z: 0.0
+    x: 0.0085
+    y: 0.0085
+    z: 0.00077
   color components:
     ambient:
       level: 1.0

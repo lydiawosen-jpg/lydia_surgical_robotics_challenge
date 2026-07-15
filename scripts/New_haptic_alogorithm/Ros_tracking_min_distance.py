@@ -66,6 +66,7 @@ class WireTrackerNode(Node):
         self.checkpoint5_sent = False
         self.ring_was_held = False
         self.end_trigger = []
+        self.end_flag_sent = False
         self.start_trigger_sub = self.create_subscription(GhostObjectState, '/ambf/env/phantom/start_trigger/State', self.start_trigger_callback, 1)
         self.checkpoint1_sub = self.create_subscription(GhostObjectState, '/ambf/env/phantom/checkpoint1/State', self.checkpoint1_callback, 1) # can use partial to consolodate callbacks
         self.checkpoint2_sub = self.create_subscription(GhostObjectState, '/ambf/env/phantom/checkpoint2/State', self.checkpoint2_callback, 1)
@@ -74,6 +75,7 @@ class WireTrackerNode(Node):
         self.checkpoint5_sub = self.create_subscription(GhostObjectState, '/ambf/env/phantom/checkpoint5/State', self.checkpoint5_callback, 1)
         self.end_trigger_sub = self.create_subscription(GhostObjectState, '/ambf/env/phantom/end_trigger/State', self.end_trigger_callback, 1)
 
+        self.ring_contact_sensor = []
         self.ring_contact_sensor_sub = self.create_subscription(SensorState, '/ambf/env/phantom/ring_contact_sensor/State', self.ring_contact_sensor_callback, 1)
 
         self.psm1_grasp_sub = self.create_subscription( ActuatorCmd, "/ambf/env/ghosts/psm1/Actuator0/Command", self.grasp_psm1_callback, 1)
@@ -121,8 +123,8 @@ class WireTrackerNode(Node):
     def start_trigger_callback(self, msg):
         self.start_trigger = msg.sensed_objects
     
-    def checkpoint_callback(self, msg, number):
-        self.checkpoint[number]  = msg.sensed_objects
+    def checkpoint1_callback(self, msg):
+        self.checkpoint1  = msg.sensed_objects
     
     def checkpoint2_callback(self, msg):
         self.checkpoint2  = msg.sensed_objects
@@ -417,15 +419,15 @@ class WireTrackerNode(Node):
         if self.ring_grasped_psm1 or self.ring_grasped_psm2:
             self.ring_was_held = True
         if self.ring_was_held and not (self.ring_grasped_psm1 or self.ring_grasped_psm2) and self.start_flag_sent and not self.task_ended(min_distance):
+            self.ring_was_held = False
             return True
         return False  
     
     def task_ended(self, min_distance):
-        if self.start_flag_sent == True:
-            end_ring_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.end_trigger)
-            if end_ring_sensed and min_distance < 0.005: # check thresholds, should they have to hold ring as passing ending, defin threshold at top of class and make capital
-                return True
-            return False
+        end_ring_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.end_trigger)
+        if end_ring_sensed and min_distance < 0.005 and self.start_flag_sent: # check thresholds, should they have to hold ring as passing ending, defin threshold at top of class and make capital
+            return True
+        return False
 
 # should go in control loop:
 # if self.task_started() and self.start_flag_sent:
@@ -464,7 +466,7 @@ class WireTrackerNode(Node):
         ring_com = np.array([T_ring_wire.p.x(), T_ring_wire.p.y(), T_ring_wire.p.z()])
         closest_t, min_distance, closest_wire_point, winning_segment_points = self.get_closest_wire_point(ring_com)
         if min_distance > 0.015:
-            print("Force feedback disabled, ring has come off the wire")
+            #print("Force feedback disabled, ring has come off the wire")
             return
         f_linear, u_vector_ring_to_wire = self.compute_linear_force(min_distance, closest_wire_point, ring_com, kp_pos, linear_deadband)
         f_linear_damping_L = self.compute_linear_damping_L(kd_pos, u_vector_ring_to_wire)
@@ -504,7 +506,8 @@ class WireTrackerNode(Node):
             print("Ring Dropped")
         if self.wire_touched(min_distance):
             print("Wire Touched")
-        if self.task_ended(min_distance):
+        if self.task_ended(min_distance) and not self.end_flag_sent:
+            self.end_flag_sent = True
             print("Task Ended")
 
     def run_control_loop(self):
