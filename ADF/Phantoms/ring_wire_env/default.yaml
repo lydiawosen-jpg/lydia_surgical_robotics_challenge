@@ -1,16 +1,16 @@
 bodies:
 - BODY base
 - BODY CameraFrame
+- BODY ring_visual
+- BODY wire_visual
+ghost objects:
 - BODY checkpoint1
 - BODY checkpoint2
 - BODY checkpoint3
 - BODY checkpoint4
 - BODY checkpoint5
 - BODY end_trigger
-- BODY ring_visual
 - BODY start_trigger
-- BODY wire_visual
-ghost objects: []
 soft bodies: []
 joints: []
 cameras:
@@ -540,7 +540,7 @@ BODY ring_visual:
 SENSOR ring_contact_sensor:
   name: ring_contact_sensor
   type: Contact
-  parent: ''
+  parent: 'ring_visual'
   location:
     orientation:
       p: -0.0
