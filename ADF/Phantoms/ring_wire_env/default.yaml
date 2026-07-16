@@ -1,16 +1,16 @@
 bodies:
 - BODY base
 - BODY CameraFrame
-- BODY Cube
-- BODY ring_visual
-- BODY wire_visual
-ghost objects:
+- BODY checkpoint1
 - BODY checkpoint2
 - BODY checkpoint3
 - BODY checkpoint4
 - BODY checkpoint5
 - BODY end_trigger
+- BODY ring_visual
 - BODY start_trigger
+- BODY wire_visual
+ghost objects: []
 soft bodies: []
 joints: []
 cameras:
@@ -142,173 +142,10 @@ BODY CameraFrame:
   publish children names: false
   publish joint names: false
   publish joint positions: false
-BODY checkpoint2:
-  name: checkpoint2
-  parent: ''
-  mesh: checkpoint2.OBJ
-  shape: BOX
-  geometry:
-    x: 0.0007115349872037768
-    y: 0.008451356552541256
-    z: 0.008451356552541256
-  location:
-    orientation:
-      p: -0.0
-      r: 0.30747
-      y: 0.0
-    position:
-      x: 0.04462
-      y: 0.18345
-      z: 0.73003
-  scale: 1.0
-  passive: false
+BODY checkpoint1:
+  name: checkpoint1
+  mesh: checkpoint1.OBJ
   collision mesh type: CONVEX_HULL
-  collision margin: 0.001
-  collision group: []
-  collision shape: BOX
-  collision geometry:
-    x: 0.0
-    y: 0.0
-    z: 0.0
-  color components:
-    ambient:
-      level: 1.0
-    diffuse:
-      b: 0.5
-      g: 0.5
-      r: 0.5
-    specular:
-      b: 0.05000000074505806
-      g: 0.05000000074505806
-      r: 0.5
-    transparency: 1.0
-  transparency: 1.0
-BODY checkpoint3:
-  name: checkpoint3
-  parent: ''
-  mesh: checkpoint3.OBJ
-  shape: BOX
-  geometry:
-    x: 0.0007115349872037768
-    y: 0.008451356552541256
-    z: 0.008451356552541256
-  location:
-    orientation:
-      p: -0.0
-      r: 0.0
-      y: 0.0
-    position:
-      x: 0.03215
-      y: 0.17505
-      z: 0.75405
-  scale: 1.0
-  passive: false
-  collision mesh type: CONVEX_HULL
-  collision margin: 0.001
-  collision group: []
-  collision shape: BOX
-  collision geometry:
-    x: 0.0
-    y: 0.0
-    z: 0.0
-  color components:
-    ambient:
-      level: 1.0
-    diffuse:
-      b: 0.5
-      g: 0.5
-      r: 0.5
-    specular:
-      b: 0.05000000074505806
-      g: 0.05000000074505806
-      r: 0.5
-    transparency: 1.0
-  transparency: 1.0
-BODY checkpoint4:
-  name: checkpoint4
-  parent: ''
-  mesh: checkpoint4.OBJ
-  shape: BOX
-  geometry:
-    x: 0.0007115349872037768
-    y: 0.010587147437036037
-    z: 0.010587147437036037
-  location:
-    orientation:
-      p: -0.0
-      r: 0.0
-      y: 0.0
-    position:
-      x: 0.01863
-      y: 0.16634
-      z: 0.7305
-  scale: 1.0
-  passive: false
-  collision mesh type: CONVEX_HULL
-  collision margin: 0.001
-  collision group: []
-  collision shape: BOX
-  collision geometry:
-    x: 0.0
-    y: 0.0
-    z: 0.0
-  color components:
-    ambient:
-      level: 1.0
-    diffuse:
-      b: 0.5
-      g: 0.5
-      r: 0.5
-    specular:
-      b: 0.05000000074505806
-      g: 0.05000000074505806
-      r: 0.5
-    transparency: 1.0
-  transparency: 1.0
-BODY checkpoint5:
-  name: checkpoint5
-  parent: ''
-  mesh: checkpoint5.OBJ
-  shape: BOX
-  geometry:
-    x: 0.0007115349872037768
-    y: 0.008451356552541256
-    z: 0.008451356552541256
-  location:
-    orientation:
-      p: -0.0
-      r: 0.0
-      y: 0.0
-    position:
-      x: 0.00449
-      y: 0.17505
-      z: 0.75405
-  scale: 1.0
-  passive: false
-  collision mesh type: CONVEX_HULL
-  collision margin: 0.001
-  collision group: []
-  collision shape: BOX
-  collision geometry:
-    x: 0.0
-    y: 0.0
-    z: 0.0
-  color components:
-    ambient:
-      level: 1.0
-    diffuse:
-      b: 0.5
-      g: 0.5
-      r: 0.5
-    specular:
-      b: 0.05000000074505806
-      g: 0.05000000074505806
-      r: 0.5
-    transparency: 1.0
-  transparency: 1.0
-BODY Cube:
-  name: Cube
-  mesh: Cube.OBJ
   mass: 0.0
   inertia:
     ix: 0.0
@@ -318,9 +155,283 @@ BODY Cube:
   scale: 1.0
   location:
     position:
-      x: 0.05703
-      y: 0.17463
-      z: 0.75421
+      x: 0.05733
+      y: 0.17484
+      z: 0.75422
+    orientation:
+      r: 0.0
+      p: -0.0
+      y: 0.0
+  inertial offset:
+    position:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+    orientation:
+      r: 0
+      p: 0
+      y: 0
+  passive: false
+  publish children names: false
+  publish joint names: false
+  publish joint positions: false
+  friction:
+    rolling: 0.0
+    static: 0.5
+  restitution: 0.1
+  damping:
+    angular: 0.1
+    linear: 0.04
+  visible: true
+  collision groups: []
+  use material: false
+  color components:
+    ambient:
+      level: 1.0
+    diffuse:
+      b: 0.8
+      g: 0.8
+      r: 0.8
+    specular:
+      b: 0.4
+      g: 0.4
+      r: 0.4
+    transparency: 1.0
+BODY checkpoint2:
+  name: checkpoint2
+  mesh: checkpoint2.OBJ
+  collision mesh type: CONVEX_HULL
+  mass: 0.0
+  inertia:
+    ix: 0.0
+    iy: 0.0
+    iz: 0.0
+  collision margin: 0.001
+  scale: 1.0
+  location:
+    position:
+      x: 0.04415
+      y: 0.18372
+      z: 0.72962
+    orientation:
+      r: 0.0
+      p: -0.0
+      y: 0.0
+  inertial offset:
+    position:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+    orientation:
+      r: 0
+      p: 0
+      y: 0
+  passive: false
+  publish children names: false
+  publish joint names: false
+  publish joint positions: false
+  friction:
+    rolling: 0.0
+    static: 0.5
+  restitution: 0.1
+  damping:
+    angular: 0.1
+    linear: 0.04
+  visible: true
+  collision groups: []
+  use material: false
+  color components:
+    ambient:
+      level: 1.0
+    diffuse:
+      b: 0.8
+      g: 0.8
+      r: 0.8
+    specular:
+      b: 0.4
+      g: 0.4
+      r: 0.4
+    transparency: 1.0
+BODY checkpoint3:
+  name: checkpoint3
+  mesh: checkpoint3.OBJ
+  collision mesh type: CONVEX_HULL
+  mass: 0.0
+  inertia:
+    ix: 0.0
+    iy: 0.0
+    iz: 0.0
+  collision margin: 0.001
+  scale: 1.0
+  location:
+    position:
+      x: 0.03216
+      y: 0.17468
+      z: 0.75368
+    orientation:
+      r: 0.0
+      p: -0.0
+      y: 0.0
+  inertial offset:
+    position:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+    orientation:
+      r: 0
+      p: 0
+      y: 0
+  passive: false
+  publish children names: false
+  publish joint names: false
+  publish joint positions: false
+  friction:
+    rolling: 0.0
+    static: 0.5
+  restitution: 0.1
+  damping:
+    angular: 0.1
+    linear: 0.04
+  visible: true
+  collision groups: []
+  use material: false
+  color components:
+    ambient:
+      level: 1.0
+    diffuse:
+      b: 0.8
+      g: 0.8
+      r: 0.8
+    specular:
+      b: 0.4
+      g: 0.4
+      r: 0.4
+    transparency: 1.0
+BODY checkpoint4:
+  name: checkpoint4
+  mesh: checkpoint4.OBJ
+  collision mesh type: CONVEX_HULL
+  mass: 0.0
+  inertia:
+    ix: 0.0
+    iy: 0.0
+    iz: 0.0
+  collision margin: 0.001
+  scale: 1.0
+  location:
+    position:
+      x: 0.01885
+      y: 0.16612
+      z: 0.72975
+    orientation:
+      r: 0.0
+      p: -0.0
+      y: 0.0
+  inertial offset:
+    position:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+    orientation:
+      r: 0
+      p: 0
+      y: 0
+  passive: false
+  publish children names: false
+  publish joint names: false
+  publish joint positions: false
+  friction:
+    rolling: 0.0
+    static: 0.5
+  restitution: 0.1
+  damping:
+    angular: 0.1
+    linear: 0.04
+  visible: true
+  collision groups: []
+  use material: false
+  color components:
+    ambient:
+      level: 1.0
+    diffuse:
+      b: 0.8
+      g: 0.8
+      r: 0.8
+    specular:
+      b: 0.4
+      g: 0.4
+      r: 0.4
+    transparency: 1.0
+BODY checkpoint5:
+  name: checkpoint5
+  mesh: checkpoint5.OBJ
+  collision mesh type: CONVEX_HULL
+  mass: 0.0
+  inertia:
+    ix: 0.0
+    iy: 0.0
+    iz: 0.0
+  collision margin: 0.001
+  scale: 1.0
+  location:
+    position:
+      x: 0.00421
+      y: 0.17484
+      z: 0.75361
+    orientation:
+      r: 0.0
+      p: -0.0
+      y: 0.0
+  inertial offset:
+    position:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+    orientation:
+      r: 0
+      p: 0
+      y: 0
+  passive: false
+  publish children names: false
+  publish joint names: false
+  publish joint positions: false
+  friction:
+    rolling: 0.0
+    static: 0.5
+  restitution: 0.1
+  damping:
+    angular: 0.1
+    linear: 0.04
+  visible: true
+  collision groups: []
+  use material: false
+  color components:
+    ambient:
+      level: 1.0
+    diffuse:
+      b: 0.8
+      g: 0.8
+      r: 0.8
+    specular:
+      b: 0.4
+      g: 0.4
+      r: 0.4
+    transparency: 1.0
+BODY end_trigger:
+  name: end_trigger
+  mesh: end_trigger.OBJ
+  mass: 0.0
+  inertia:
+    ix: 0.0
+    iy: 0.0
+    iz: 0.0
+  collision margin: 0.001
+  scale: 1.0
+  location:
+    position:
+      x: -0.00247
+      y: 0.17442
+      z: 0.72769
     orientation:
       r: 0.0
       p: -0.0
@@ -349,9 +460,9 @@ BODY Cube:
   collision groups: []
   collision shape: BOX
   collision geometry:
-    x: 0.0085
-    y: 0.0085
-    z: 0.00077
+    x: 0.012
+    y: 0.012
+    z: 0.0013
   collision offset:
     position:
       x: 0.0
@@ -359,7 +470,7 @@ BODY Cube:
       z: 0.0
     orientation:
       r: 0.0
-      p: 1.5708
+      p: 0.0
       y: 0.0
   use material: false
   color components:
@@ -374,47 +485,6 @@ BODY Cube:
       g: 0.4
       r: 0.4
     transparency: 1.0
-BODY end_trigger:
-  name: end_trigger
-  parent: ''
-  mesh: end_trigger.OBJ
-  shape: BOX
-  geometry:
-    x: 0.0010012589627876878
-    y: 0.0010225210571661592
-    z: 0.0007115344051271677
-  location:
-    orientation:
-      p: -0.0
-      r: 0.0
-      y: 0.0
-    position:
-      x: -0.00224
-      y: 0.17473
-      z: 0.727
-  scale: 1.0
-  passive: false
-  collision mesh type: CONVEX_HULL
-  collision margin: 0.001
-  collision group: []
-  collision shape: BOX
-  collision geometry:
-    x: 0.0
-    y: 0.0
-    z: 0.0
-  color components:
-    ambient:
-      level: 1.0
-    diffuse:
-      b: 0.5
-      g: 0.5
-      r: 0.5
-    specular:
-      b: 0.05000000074505806
-      g: 0.05000000074505806
-      r: 0.5
-    transparency: 1.0
-  transparency: 1.0
 BODY ring_visual:
   name: ring_visual
   mesh: ring_visual.OBJ
@@ -486,45 +556,72 @@ SENSOR ring_contact_sensor:
   process contact details: false
 BODY start_trigger:
   name: start_trigger
-  parent: ''
   mesh: start_trigger.OBJ
-  shape: BOX
-  geometry:
-    x: 0.0009978892048820853
-    y: 0.0009661898366175592
-    z: 0.0007115344051271677
-  location:
-    orientation:
-      p: -0.0
-      r: 0.0
-      y: 0.0
-    position:
-      x: 0.06527
-      y: 0.17505
-      z: 0.727
-  scale: 1.0
-  passive: false
-  collision mesh type: CONVEX_HULL
+  mass: 0.0
+  inertia:
+    ix: 0.0
+    iy: 0.0
+    iz: 0.0
   collision margin: 0.001
-  collision group: []
+  scale: 1.0
+  location:
+    position:
+      x: 0.06539
+      y: 0.1748
+      z: 0.72769
+    orientation:
+      r: 0.0
+      p: -0.0
+      y: 0.0
+  inertial offset:
+    position:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+    orientation:
+      r: 0
+      p: 0
+      y: 0
+  passive: false
+  publish children names: false
+  publish joint names: false
+  publish joint positions: false
+  friction:
+    rolling: 0.0
+    static: 0.5
+  restitution: 0.1
+  damping:
+    angular: 0.1
+    linear: 0.04
+  visible: true
+  collision groups: []
   collision shape: BOX
   collision geometry:
-    x: 0.0
-    y: 0.0
-    z: 0.0
+    x: 0.012
+    y: 0.012
+    z: 0.0013
+  collision offset:
+    position:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+    orientation:
+      r: 0.0
+      p: 0.0
+      y: 0.0
+  use material: false
   color components:
     ambient:
       level: 1.0
     diffuse:
-      b: 0.5
-      g: 0.5
-      r: 0.5
+      b: 0.8
+      g: 0.8
+      r: 0.8
     specular:
-      b: 0.05000000074505806
-      g: 0.05000000074505806
-      r: 0.5
-    transparency: 0.800000011920929
-  transparency: 0.800000011920929
+      b: 0.4
+      g: 0.4
+      r: 0.4
+    transparency: 1.0
 BODY wire_visual:
   name: wire_visual
   mesh: wire_visual.OBJ
