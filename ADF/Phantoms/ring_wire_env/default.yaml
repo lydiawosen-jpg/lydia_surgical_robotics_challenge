@@ -1,15 +1,15 @@
 bodies:
 - BODY base
 - BODY CameraFrame
-- BODY ring_visual
-- BODY wire_visual
-ghost objects:
 - BODY checkpoint1
 - BODY checkpoint2
 - BODY checkpoint3
 - BODY checkpoint4
 - BODY checkpoint5
 - BODY end_trigger
+- BODY ring_visual
+- BODY wire_visual
+ghost objects:
 - BODY start_trigger
 soft bodies: []
 joints: []
@@ -182,7 +182,7 @@ BODY checkpoint1:
   damping:
     angular: 0.1
     linear: 0.04
-  visible: true
+  visible: false
   collision groups: []
   use material: false
   color components:
@@ -237,7 +237,7 @@ BODY checkpoint2:
   damping:
     angular: 0.1
     linear: 0.04
-  visible: true
+  visible: false
   collision groups: []
   use material: false
   color components:
@@ -292,7 +292,7 @@ BODY checkpoint3:
   damping:
     angular: 0.1
     linear: 0.04
-  visible: true
+  visible: false
   collision groups: []
   use material: false
   color components:
@@ -347,7 +347,7 @@ BODY checkpoint4:
   damping:
     angular: 0.1
     linear: 0.04
-  visible: true
+  visible: false
   collision groups: []
   use material: false
   color components:
@@ -402,7 +402,7 @@ BODY checkpoint5:
   damping:
     angular: 0.1
     linear: 0.04
-  visible: true
+  visible: false
   collision groups: []
   use material: false
   color components:
@@ -540,7 +540,7 @@ BODY ring_visual:
 SENSOR ring_contact_sensor:
   name: ring_contact_sensor
   type: Contact
-  parent: 'ring_visual'
+  parent: ''
   location:
     orientation:
       p: -0.0
@@ -556,72 +556,45 @@ SENSOR ring_contact_sensor:
   process contact details: false
 BODY start_trigger:
   name: start_trigger
+  parent: ''
   mesh: start_trigger.OBJ
-  mass: 0.0
-  inertia:
-    ix: 0.0
-    iy: 0.0
-    iz: 0.0
-  collision margin: 0.001
-  scale: 1.0
+  shape: BOX
+  geometry:
+    x: 0.0010418971069157124
+    y: 0.0010429024696350098
+    z: 0.0013429857790470123
   location:
+    orientation:
+      p: -0.0
+      r: 0.0
+      y: 0.0
     position:
       x: 0.06539
       y: 0.1748
       z: 0.72769
-    orientation:
-      r: 0.0
-      p: -0.0
-      y: 0.0
-  inertial offset:
-    position:
-      x: 0.0
-      y: 0.0
-      z: 0.0
-    orientation:
-      r: 0
-      p: 0
-      y: 0
+  scale: 1.0
   passive: false
-  publish children names: false
-  publish joint names: false
-  publish joint positions: false
-  friction:
-    rolling: 0.0
-    static: 0.5
-  restitution: 0.1
-  damping:
-    angular: 0.1
-    linear: 0.04
-  visible: true
-  collision groups: []
+  collision mesh type: CONVEX_HULL
+  collision margin: 0.001
+  collision group: []
   collision shape: BOX
   collision geometry:
-    x: 0.012
-    y: 0.012
-    z: 0.0013
-  collision offset:
-    position:
-      x: 0.0
-      y: 0.0
-      z: 0.0
-    orientation:
-      r: 0.0
-      p: 0.0
-      y: 0.0
-  use material: false
+    x: 0.0
+    y: 0.0
+    z: 0.0
   color components:
     ambient:
       level: 1.0
     diffuse:
-      b: 0.8
-      g: 0.8
-      r: 0.8
+      b: 0.5
+      g: 0.5
+      r: 0.5
     specular:
-      b: 0.4
-      g: 0.4
-      r: 0.4
+      b: 0.05000000074505806
+      g: 0.05000000074505806
+      r: 0.5
     transparency: 1.0
+  transparency: 1.0
 BODY wire_visual:
   name: wire_visual
   mesh: wire_visual.OBJ
