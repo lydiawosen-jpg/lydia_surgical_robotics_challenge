@@ -569,8 +569,8 @@ def main(args=None):
     finally:
         tracker.destroy_node()
         rclpy.shutdown()
-        client_socket.close()
-        server_socket.close()
+        self.client_socket.close()
+        self.server_socket.close()
 
 
 if __name__ == '__main__':
