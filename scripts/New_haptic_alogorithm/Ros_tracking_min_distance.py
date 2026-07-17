@@ -14,6 +14,7 @@ from geometry_msgs.msg import WrenchStamped, TwistStamped
 from std_msgs.msg import Bool
 from sensor_msgs.msg import Joy
 from datetime import datetime
+import socket
 
 # ==========================================
 # 1. CORE BEZIER MATH
@@ -37,7 +38,18 @@ class WireTrackerNode(Node):
             self.my_total_curve = json.load(f)
         
         self.get_logger().info("Waiting for static wire pose from AMBF...")
-        
+
+        print("0 - Task started\n1 - Checkpoint 1 Passed\n2 - Checkpoint 2 Passed\n3 - Checkpoint 3 Passed\n4 - Checkpoint 4 Passed\n5 - Checkpoint 5 Passed\n6 - Wire Touched\n7 - Ring Dropped\n8 - Task Ended")
+        #----------------------------------------------
+        # Initialize Socket placeholders
+        self.server_socket = None
+        self.client_socket = None
+        self.cobi_connected = False
+
+        # Start background thread to handle socket connections without blocking ROS
+        self.socket_thread = threading.Thread(target=self.setup_socket_connection, daemon=True)
+        self.socket_thread.start()
+        #--------------------------------
         self.count = 0
         # Initialize the wire's world frame as None until we receive it
         self.latest_T_wire_world = None  
@@ -108,6 +120,16 @@ class WireTrackerNode(Node):
         self.orientation_abs_pub_L.publish(abs_flag)
         self.orientation_abs_pub_R.publish(abs_flag)   
 
+    def setup_socket_connection(self):
+        host_ip = "10.162.34.171" # Linux desktop IP address
+        port = 6400  # COBI Studio default port
+
+        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) # allows port to be reused immediately after the program exits
+        server_socket.bind((host_ip, port))
+        server_socket.listen(1)
+        self.client_socket, client_address = server_socket.accept()
+    
     def ring_contact_sensor_callback(self, msg):
         # Initialize an empty list to store the names
         sensed_objects = []
@@ -489,31 +511,39 @@ class WireTrackerNode(Node):
         #self.transform_and_publish_wrench(max_force, max_torque, f_total_linear_L, f_total_linear_R, torque_total_L, torque_total_R)  # Publish the total linear force to both MTMs
     
         if self.task_started(min_distance) and not self.start_flag_sent:
-            #client_socket.sendall(bytes(0))
-            self.start_flag_sent = True 
+            self.start_flag_sent = True
+            self.client_socket.sendall(bytes([0])) 
             print("Task Started")
         if self.checkpoint1_passed(min_distance) and not self.checkpoint1_sent: # can make list of these checkpoint and run through them
             self.checkpoint1_sent = True
+            self.client_socket.sendall(bytes([1]))
             print("Passed checkpoint 1")
         if self.checkpoint2_passed(min_distance) and not self.checkpoint2_sent:
             self.checkpoint2_sent = True
+            self.client_socket.sendall(bytes([2]))
             print("Passed checkpoint 2")
         if self.checkpoint3_passed(min_distance) and not self.checkpoint3_sent:
             self.checkpoint3_sent = True
+            self.client_socket.sendall(bytes([3]))
             print("Passed checkpoint 3")
         if self.checkpoint4_passed(min_distance) and not self.checkpoint4_sent:
             self.checkpoint4_sent = True
+            self.client_socket.sendall(bytes([4]))
             print("Passed checkpoint 4")
         if self.checkpoint5_passed(min_distance) and not self.checkpoint5_sent:
             self.checkpoint5_sent = True
+            self.client_socket.sendall(bytes([5]))
             print("Passed checkpoint 5")
-        if self.ring_dropped(min_distance): # test on dvrk if this sends multiple messages during one action of dropping
-            print("Ring Dropped")
         if self.wire_touched(min_distance):
             self.count += 1
+            self.client_socket.sendall(bytes([6]))
             print(f"Wire Touched {self.count}")
+        if self.ring_dropped(min_distance): # test on dvrk if this sends multiple messages during one action of dropping
+            self.client_socket.sendall(bytes([7]))
+            print("Ring Dropped")
         if self.task_ended(min_distance) and not self.end_flag_sent:
             self.end_flag_sent = True
+            self.client_socket.sendall(bytes([8]))
             print("Task Ended")
 
     def run_control_loop(self):
@@ -539,6 +569,8 @@ def main(args=None):
     finally:
         tracker.destroy_node()
         rclpy.shutdown()
+        client_socket.close()
+        server_socket.close()
 
 
 if __name__ == '__main__':

@@ -12,7 +12,7 @@ class COBIConnection:
         server_socket.bind((host_ip, port))
         server_socket.listen(1)
         server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) # allows port to be reused immediately after the program exits
-        client_socket, client_address = server_socket.accept
+        client_socket, client_address = server_socket.accept()
 
         print("0 - Task started\n1 - Wire touched\n2 - Ring dropped\n3 - Task ended")
     
