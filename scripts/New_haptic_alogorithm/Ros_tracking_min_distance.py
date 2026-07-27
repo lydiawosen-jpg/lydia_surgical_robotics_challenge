@@ -16,9 +16,7 @@ from sensor_msgs.msg import Joy
 from datetime import datetime
 import socket
 
-# ==========================================
-# 1. CORE BEZIER MATH
-# ==========================================
+
 def get_bezier_point(t, P0, P1, P2, P3):
     return (1-t)**3 * P0 + 3*(1-t)**2 * t * P1 + 3*(1-t) * t**2 * P2 + t**3 * P3
 
@@ -39,7 +37,7 @@ class WireTrackerNode(Node):
         
         self.get_logger().info("Waiting for static wire pose from AMBF...")
 
-        print("0 - Task started\n1 - Checkpoint 1 Passed\n2 - Checkpoint 2 Passed\n3 - Checkpoint 3 Passed\n4 - Checkpoint 4 Passed\n5 - Checkpoint 5 Passed\n6 - Wire Touched\n7 - Ring Dropped\n8 - Task Ended")
+        #print("0 - Task started\n1 - Checkpoint 1 Passed\n2 - Checkpoint 2 Passed\n3 - Checkpoint 3 Passed\n4 - Checkpoint 4 Passed\n5 - Checkpoint 5 Passed\n6 - Wire Touched\n7 - Ring Dropped\n8 - Task Ended")
         #----------------------------------------------
         # Initialize Socket placeholders
         self.server_socket = None
@@ -47,8 +45,8 @@ class WireTrackerNode(Node):
         self.cobi_connected = False
 
         # Start background thread to handle socket connections without blocking ROS
-        self.socket_thread = threading.Thread(target=self.setup_socket_connection, daemon=True)
-        self.socket_thread.start()
+        #self.socket_thread = threading.Thread(target=self.setup_socket_connection, daemon=True)
+        #self.socket_thread.start()
         #--------------------------------
         self.count = 0
         # Initialize the wire's world frame as None until we receive it
@@ -114,6 +112,8 @@ class WireTrackerNode(Node):
         self.twist_sub_L = self.create_subscription(TwistStamped, '/MTML/measured_cv', self.twist_callback_L, 1)
         self.twist_sub_R = self.create_subscription(TwistStamped, '/MTMR/measured_cv', self.twist_callback_R, 1)
 
+        self.prev_torque = np.array([0.0, 0.0, 0.0])
+        
         # Publish the absolute oriention flag once
         abs_flag = Bool()
         abs_flag.data = True
@@ -260,40 +260,110 @@ class WireTrackerNode(Node):
 
         return closest_t, min_distance, closest_wire_point, winning_segment_points
         
-    def compute_rotational_error(self,closest_t, T_ring_wire, winning_segment_points):
-        # Calculate the tangent vector (derivative) at your closest_t
+
+
+
+    def compute_rotational_error(self, closest_t, T_ring_wire, winning_segment_points):
         P0, P1, P2, P3 = winning_segment_points
-         
-        # Calculate the tangent vector (derivative) at your closest_t
-        P0, P1, P2, P3 = winning_segment_points
+        
+        # Calculate derivative/tangent vector at closest_t
         tangent = (3 * (1 - closest_t)**2 * (P1 - P0) + 
                 6 * (1 - closest_t) * closest_t * (P2 - P1) + 
-                3 * closest_t**2 * (P3 - P2)) # this should be a function since its the same excpet for one variable, to make it go faster
+                3 * closest_t**2 * (P3 - P2))
 
-        # Convert tangent into a unit vector
-        u_tangent = tangent / np.linalg.norm(tangent)
+        # Normalize tangent vector (unit vector)
+        tangent_norm = np.linalg.norm(tangent)
+        if tangent_norm < 1e-6:
+            u_tangent = np.array([0.0, 0.0, 1.0]) # Fallback unit vector if tangent is 0
+        else:
+            u_tangent = tangent / tangent_norm
 
-        # Extract the Ring's Z-axis unit vector from its KDL rotation matrix
-        # In PyKDL, Frame.M.UnitZ() gives the local Z axis vector relative to the wire frame
+        # Extract Ring's local Z-axis unit vector relative to wire frame
         u_ring_z = np.array([T_ring_wire.M.UnitZ().x(), 
                             T_ring_wire.M.UnitZ().y(), 
                             T_ring_wire.M.UnitZ().z()])
 
-        # Calculate the angular error
+        # Compute dot product and clip to [-1.0, 1.0] to prevent arccos bounds errors
         dot_product = np.dot(u_tangent, u_ring_z)
-
-        # Use absolute value if direction/flipping doesn't matter
-        #dot_product_val = abs(dot_product) 
-
-        clipped_dot = np.clip(dot_product, -1.0, 1.0) # Clipping to avoid floating-point math errors outside [-1, 1]
+        clipped_dot = np.clip(dot_product, -1.0, 1.0)
+        
+        # Calculate unsigned angular error in degrees
         angular_error_rad = np.arccos(clipped_dot)
         angular_error_deg = np.degrees(angular_error_rad)
 
-        # Log new error metrics
-        #self.get_logger().info(f"Rotational Erro$ T_camera_worldr: {angular_error_deg:.2f}°")
+        return angular_error_deg, u_tangent, u_ring_z, dot_product
 
-        # break down rotaional into which direction
-        return angular_error_deg, u_tangent, u_ring_z, dot_product  
+
+
+   
+    
+    
+    # def compute_rotational_error(self, closest_t, T_ring_wire, winning_segment_points):
+    #     P0, P1, P2, P3 = winning_segment_points
+    #     tangent = (3 * (1 - closest_t)**2 * (P1 - P0) + 
+    #             6 * (1 - closest_t) * closest_t * (P2 - P1) + 
+    #             3 * closest_t**2 * (P3 - P2))
+
+    #     u_tangent = tangent / np.linalg.norm(tangent)
+
+    #     u_ring_z = np.array([T_ring_wire.M.UnitZ().x(), 
+    #                         T_ring_wire.M.UnitZ().y(), 
+    #                         T_ring_wire.M.UnitZ().z()])
+
+    #     # 1. Keep your original cross product order to maintain correct torque signs
+    #     rotation_axis = np.cross(u_tangent, u_ring_z)
+    #     norm_axis = np.linalg.norm(rotation_axis)
+        
+    #     # 2. Use dot product alongside cross product to get the full 0-180 degree range
+    #     dot_product = np.clip(np.dot(u_tangent, u_ring_z), -1.0, 1.0)
+        
+    #     # 3. arctan2 gives a perfectly smooth error across ALL orientations
+    #     angular_error_rad = np.arctan2(norm_axis, dot_product)
+
+    #     if norm_axis > 1e-6:
+    #         u_rotation_axis = rotation_axis / norm_axis
+    #     else:
+    #         u_rotation_axis = np.array([0.0, 0.0, 0.0])
+
+    #     angular_error_deg = np.degrees(angular_error_rad)
+    #     return angular_error_deg, u_rotation_axis
+    
+    
+    
+    # OG def compute_rotational_error(self,closest_t, T_ring_wire, winning_segment_points):
+    #     # Calculate the tangent vector (derivative) at your closest_t
+    #     P0, P1, P2, P3 = winning_segment_points
+         
+    #     # Calculate the tangent vector (derivative) at your closest_t
+    #     P0, P1, P2, P3 = winning_segment_points
+    #     tangent = (3 * (1 - closest_t)**2 * (P1 - P0) + 
+    #             6 * (1 - closest_t) * closest_t * (P2 - P1) + 
+    #             3 * closest_t**2 * (P3 - P2)) # this should be a function since its the same excpet for one variable, to make it go faster
+
+    #     # Convert tangent into a unit vector
+    #     u_tangent = tangent / np.linalg.norm(tangent)
+
+    #     # Extract the Ring's Z-axis unit vector from its KDL rotation matrix
+    #     # In PyKDL, Frame.M.UnitZ() gives the local Z axis vector relative to the wire frame
+    #     u_ring_z = np.array([T_ring_wire.M.UnitZ().x(), 
+    #                         T_ring_wire.M.UnitZ().y(), 
+    #                         T_ring_wire.M.UnitZ().z()])
+
+    #     # Calculate the angular error
+    #     dot_product = np.dot(u_tangent, u_ring_z)
+
+    #     # Use absolute value if direction/flipping doesn't matter
+    #     #dot_product_val = abs(dot_product) 
+
+    #     clipped_dot = np.clip(dot_product, -1.0, 1.0) # Clipping to avoid floating-point math errors outside [-1, 1]
+    #     angular_error_rad = np.arccos(clipped_dot)
+    #     angular_error_deg = np.degrees(angular_error_rad)
+
+    #     # Log new error metrics
+    #     #self.get_logger().info(f"Rotational Erro$ T_camera_worldr: {angular_error_deg:.2f}°")
+
+    #     # break down rotaional into which direction
+    #     return angular_error_deg, u_tangent, u_ring_z, dot_product  
 
 
     def compute_linear_force(self, min_distance, closest_wire_point, ring_com, kp_pos, linear_deadband):
@@ -324,21 +394,61 @@ class WireTrackerNode(Node):
         f_linear_damping_R = kd_pos * vel_into_wall * u_vector_ring_to_wire
         return f_linear_damping_R # is a numpy array realtive to wire
 
-    def compute_torque(self, angular_error_deg, u_tangent, u_ring_z, dot_product, kp_rot, angular_deadband):
-        if angular_error_deg < angular_deadband:
-            torque_angular = np.array([0.0, 0.0, 0.0])
-        else:
-            # Calculate the axis of rotation for the angular error
-            u_ring_z_aligned = -u_ring_z if dot_product < 0 else u_ring_z
-            rotation_axis = np.cross(u_tangent, u_ring_z_aligned)
-            if np.linalg.norm(rotation_axis) > 1e-6:  # safety check - cross product with zero angle is zero vector, norm of this would cause dividing by zero
-                u_rotation_axis = rotation_axis / np.linalg.norm(rotation_axis)
-            else:
-                u_rotation_axis = np.array([0.0, 0.0, 0.0])  # No meaningful rotation axis
+    
+    
 
-            effective_angular_error_rad = np.radians(angular_error_deg - angular_deadband)
-            torque_angular = kp_rot * effective_angular_error_rad * u_rotation_axis # torque is in direction of error
-        return torque_angular # is a numpy array realtive to wire
+
+    def compute_torque(self, angular_error_deg, u_tangent, u_ring_z, dot_product, kp_rot, angular_deadband):
+        # Deadband check
+        if angular_error_deg < angular_deadband:
+            return np.array([0.0, 0.0, 0.0])
+
+        # Direct cross product gives the continuous axis of rotation from u_ring_z toward u_tangent
+        rotation_axis = np.cross(u_ring_z, u_tangent)
+        axis_norm = np.linalg.norm(rotation_axis)
+
+        # Singularity Check: If vectors are aligned (0° or 180°), axis_norm goes to 0.
+        # We exit safely to avoid dividing by zero or magnifying floating-point noise.
+        if axis_norm < 1e-3:
+            return np.array([0.0, 0.0, 0.0])
+
+        # Unit axis of rotation
+        u_rotation_axis = rotation_axis / axis_norm
+
+        # Calculate proportional torque magnitude
+        effective_angular_error_rad = np.radians(angular_error_deg - angular_deadband)
+        torque_angular = kp_rot * effective_angular_error_rad * u_rotation_axis
+
+        return torque_angular
+
+
+
+    # def compute_torque(self, angular_error_deg, u_rotation_axis, kp_rot, angular_deadband):
+    #     if angular_error_deg < angular_deadband:
+    #         return np.array([0.0, 0.0, 0.0])
+        
+    #     effective_angular_error_rad = np.radians(angular_error_deg - angular_deadband)
+        
+    #     # Multiply directly by the naturally continuous direction axis
+    #     torque_angular = kp_rot * effective_angular_error_rad * u_rotation_axis
+    #     return torque_angular
+    
+    
+    #  OG def compute_torque(self, angular_error_deg, u_tangent, u_ring_z, dot_product, kp_rot, angular_deadband):
+    #     if angular_error_deg < angular_deadband:
+    #         torque_angular = np.array([0.0, 0.0, 0.0])
+    #     else:
+    #         # Calculate the axis of rotation for the angular error
+    #         u_ring_z_aligned = u_ring_z #-u_ring_z if dot_product < 0 else u_ring_z
+    #         rotation_axis = np.cross(u_tangent, u_ring_z_aligned)
+    #         if np.linalg.norm(rotation_axis) > 1e-6:  # safety check - cross product with zero angle is zero vector, norm of this would cause dividing by zero
+    #             u_rotation_axis = rotation_axis / np.linalg.norm(rotation_axis)
+    #         else:
+    #             u_rotation_axis = np.array([0.0, 0.0, 0.0])  # No meaningful rotation axis
+
+    #         effective_angular_error_rad = np.radians(angular_error_deg - angular_deadband)
+    #         torque_angular = kp_rot * effective_angular_error_rad * u_rotation_axis # torque is in direction of error
+    #     return torque_angular # is a numpy array realtive to wire
 
     def compute_torque_damping_L(self, kd_rot):
         mtmL_ang_vel = np.array([self.latest_twist_L.twist.angular.x, self.latest_twist_L.twist.angular.y, self.latest_twist_L.twist.angular.z])
@@ -360,6 +470,7 @@ class WireTrackerNode(Node):
         # Include correction for mtm console tilt
         T_baseoffset = PyKDL.Frame(PyKDL.Rotation.RPY((3.14 - 0.8) / 2, 0, 0), PyKDL.Vector(0, 0, 0))
         
+        
         def to_camera_frame(f_L_or_R):
             f_vec = PyKDL.Vector(f_L_or_R[0], f_L_or_R[1], f_L_or_R[2])
             f_cam = T_baseoffset.M * (R_wire_to_camera * f_vec)
@@ -370,6 +481,7 @@ class WireTrackerNode(Node):
 
         torque_total_L_cam = to_camera_frame(torque_total_L)
         torque_total_R_cam = to_camera_frame(torque_total_R)
+        #print(f"cam troque: {torque_total_L_cam}")
         
         def build_wrench(f_cam, t_cam):
             wrench_msg = WrenchStamped()
@@ -389,10 +501,10 @@ class WireTrackerNode(Node):
         else:
             self.wrench_pub_L.publish(zero_wrench)
 
-        # if self.ring_grasped_psm2:
-        #     self.wrench_pub_R.publish(build_wrench(f_total_R_cam, torque_total_R_cam))
-        # else:
-        #     self.wrench_pub_R.publish(zero_wrench)
+        if self.ring_grasped_psm2:
+            self.wrench_pub_R.publish(build_wrench(f_total_R_cam, torque_total_R_cam))
+        else:
+            self.wrench_pub_R.publish(zero_wrench)
          
 
    # have another yaml file for contactsensor on ring, look at email adnan sent u, can make the cobi start running and stop      
@@ -456,28 +568,16 @@ class WireTrackerNode(Node):
             return True
         return False
 
-# should go in control loop:
-# if self.task_started() and self.start_flag_sent:
-#     client_socket.sendall(bytes(0))
-#     self.start_flag_sent = False  # command to permannetly set to true
-#     print("Task started")
-# if self.wire_touched():
-#     client_socket.sendall(bytes(1))
-#     print("Wire touched")
-# if self.ring_dropped():
-#     client_socket.sendall(bytes(2))
-#     print("Ring dropped")
-# if self.task_ended():
-#     client_socket.sendall(bytes(3))
-#     print("Task ended")
+
+
 
 # ---------------------- Control Loop ----------------------
     def control_loop(self):
         max_force = 2.0 # N
-        max_torque = 0.05 # N·m
-        kp_pos = 120  # Spring constant for position (N/m)
-        kd_pos = 3  # Damping constant for velocity (N/(m/s))
-        kp_rot = 0.1  # Spring constant for rotation (N·m/rad)
+        max_torque = 0.5 #0.05 # N·m
+        kp_pos = 0#120  # Spring constant for position (N/m)
+        kd_pos = 0#3  # Damping constant for velocity (N/(m/s))
+        kp_rot = 0.1 #0.1  # Spring constant for rotation (N·m/rad)
         kd_rot = 0.0  # Damping constant for angular velocity (N·m/(rad/s))
         linear_deadband = 0.0001 # meters, distance from wire centerline where no force is applied
         angular_deadband = 0  # degrees, angle from wire tangent where no force is applied
@@ -493,7 +593,7 @@ class WireTrackerNode(Node):
         ring_com = np.array([T_ring_wire.p.x(), T_ring_wire.p.y(), T_ring_wire.p.z()])
         closest_t, min_distance, closest_wire_point, winning_segment_points = self.get_closest_wire_point(ring_com)
         if min_distance > 0.015:
-            #print("Force feedback disabled, ring has come off the wire")
+            print("Force feedback disabled, ring has come off the wire")
             return
         f_linear, u_vector_ring_to_wire = self.compute_linear_force(min_distance, closest_wire_point, ring_com, kp_pos, linear_deadband)
         f_linear_damping_L = self.compute_linear_damping_L(kd_pos, u_vector_ring_to_wire)
@@ -501,49 +601,57 @@ class WireTrackerNode(Node):
         f_total_linear_L = f_linear - f_linear_damping_L
         f_total_linear_R = f_linear - f_linear_damping_R
         
+        
         angular_error_deg, u_tangent, u_ring_z, dot_product = self.compute_rotational_error(closest_t, T_ring_wire, winning_segment_points)
         torque_angular = self.compute_torque(angular_error_deg, u_tangent, u_ring_z, dot_product, kp_rot, angular_deadband)
+        # OG angular_error_deg, u_rotation_axis = self.compute_rotational_error(closest_t, T_ring_wire, winning_segment_points)
+        # OG torque_angular = self.compute_torque(angular_error_deg, u_rotation_axis, kp_rot, angular_deadband)
+        
+        #angular_error_deg, u_tangent, u_ring_z, dot_product = self.compute_rotational_error(closest_t, T_ring_wire, winning_segment_points)
+        #torque_angular = self.compute_torque(angular_error_deg, u_tangent, u_ring_z, dot_product, kp_rot, angular_deadband)
         torque_damping_L = self.compute_torque_damping_L(kd_rot)
         torque_damping_R = self.compute_torque_damping_R(kd_rot)
         torque_total_L = -torque_angular - torque_damping_L # negative torque angular to resist error rotation, negative dmaping roates in opposite direction of mtm
         torque_total_R = -torque_angular - torque_damping_R # negative torque angular to resist error rotation
 
-        #self.transform_and_publish_wrench(max_force, max_torque, f_total_linear_L, f_total_linear_R, torque_total_L, torque_total_R)  # Publish the total linear force to both MTMs
-    
+        self.transform_and_publish_wrench(max_force, max_torque, f_total_linear_L, f_total_linear_R, torque_total_L, torque_total_R)  # Publish the total linear force to both MTMs
+        #print(f"raw torque: {torque_angular}")
+        print(f"angular error deg: {angular_error_deg}")
+
         if self.task_started(min_distance) and not self.start_flag_sent:
             self.start_flag_sent = True
-            self.client_socket.sendall(bytes([0])) 
+            #self.client_socket.sendall(bytes([0])) 
             print("Task Started")
         if self.checkpoint1_passed(min_distance) and not self.checkpoint1_sent: # can make list of these checkpoint and run through them
             self.checkpoint1_sent = True
-            self.client_socket.sendall(bytes([1]))
+            #self.client_socket.sendall(bytes([1]))
             print("Passed checkpoint 1")
         if self.checkpoint2_passed(min_distance) and not self.checkpoint2_sent:
             self.checkpoint2_sent = True
-            self.client_socket.sendall(bytes([2]))
+            #self.client_socket.sendall(bytes([2]))
             print("Passed checkpoint 2")
         if self.checkpoint3_passed(min_distance) and not self.checkpoint3_sent:
             self.checkpoint3_sent = True
-            self.client_socket.sendall(bytes([3]))
+            #self.client_socket.sendall(bytes([3]))
             print("Passed checkpoint 3")
         if self.checkpoint4_passed(min_distance) and not self.checkpoint4_sent:
             self.checkpoint4_sent = True
-            self.client_socket.sendall(bytes([4]))
+            #self.client_socket.sendall(bytes([4]))
             print("Passed checkpoint 4")
         if self.checkpoint5_passed(min_distance) and not self.checkpoint5_sent:
             self.checkpoint5_sent = True
-            self.client_socket.sendall(bytes([5]))
+            #self.client_socket.sendall(bytes([5]))
             print("Passed checkpoint 5")
         if self.wire_touched(min_distance):
             self.count += 1
-            self.client_socket.sendall(bytes([6]))
+            #self.client_socket.sendall(bytes([6]))
             print(f"Wire Touched {self.count}")
         if self.ring_dropped(min_distance): # test on dvrk if this sends multiple messages during one action of dropping
-            self.client_socket.sendall(bytes([7]))
+            #self.client_socket.sendall(bytes([7]))
             print("Ring Dropped")
         if self.task_ended(min_distance) and not self.end_flag_sent:
             self.end_flag_sent = True
-            self.client_socket.sendall(bytes([8]))
+            #self.client_socket.sendall(bytes([8]))
             print("Task Ended")
 
     def run_control_loop(self):
@@ -569,8 +677,8 @@ def main(args=None):
     finally:
         tracker.destroy_node()
         rclpy.shutdown()
-        self.client_socket.close()
-        self.server_socket.close()
+        #self.client_socket.close()
+        #self.server_socket.close()
 
 
 if __name__ == '__main__':
