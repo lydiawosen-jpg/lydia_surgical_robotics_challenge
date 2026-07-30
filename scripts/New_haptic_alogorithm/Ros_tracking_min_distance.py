@@ -37,7 +37,7 @@ class WireTrackerNode(Node):
         
         self.get_logger().info("Waiting for static wire pose from AMBF...")
 
-        #print("0 - Task started\n1 - Checkpoint 1 Passed\n2 - Checkpoint 2 Passed\n3 - Checkpoint 3 Passed\n4 - Checkpoint 4 Passed\n5 - Checkpoint 5 Passed\n6 - Wire Touched\n7 - Ring Dropped\n8 - Task Ended")
+        #print("0 - Task started\n1 - Checkpoint 1 Passed\n2 - Checkpoint 2 Passed\n3 - Checkpoint 3 Passed\n4 - Checkpoint 4 Passed\n5 - Checkpoint 5 Passed\n6 - Ting Touched Wire\n7 - Ring Dropped\n8 - Ring Came Off\n9 - PSM Touched Wire\n10 - Task Ended")
         #----------------------------------------------
         # Initialize Socket placeholders
         self.server_socket = None
@@ -48,7 +48,7 @@ class WireTrackerNode(Node):
         #self.socket_thread = threading.Thread(target=self.setup_socket_connection, daemon=True)
         #self.socket_thread.start()
         #--------------------------------
-        self.count = 0
+        self.count_ring = 0
         # Initialize the wire's world frame as None until we receive it
         self.latest_T_wire_world = None  
         self.latest_T_camera_world = None
@@ -63,6 +63,15 @@ class WireTrackerNode(Node):
         self.control_thread = threading.Thread(target=self.run_control_loop, daemon=True)
         self.control_thread.start()
 
+       
+        #contact timer
+        self.prev_started = False
+        self.total_time = 0
+        self.start_time = 0.0
+
+        self.trial_started = False
+       
+       
         self.start_flag_sent = False 
         self.start_trigger = []
         self.checkpoint1 = []
@@ -76,6 +85,7 @@ class WireTrackerNode(Node):
         self.checkpoint5 = []
         self.checkpoint5_sent = False
         self.ring_was_held = False
+        self.ring_came_off = False
         self.end_trigger = []
         self.end_flag_sent = False
         self.previous_not_touched = False
@@ -89,6 +99,11 @@ class WireTrackerNode(Node):
 
         self.ring_contact_sensor = []
         self.ring_contact_sensor_sub = self.create_subscription(ContactSensorState, '/ambf/env/phantom/ring_contact_sensor/State', self.ring_contact_sensor_callback, 1)
+
+        self.wire_contact_sensor = []
+        self.wire_contact_sensor_sub = self.create_subscription(ContactSensorState, '/ambf/env/phantom/wire_contact_sensor/State', self.wire_contact_sensor_callback, 1)
+        self.count_psm = 0
+
 
         self.psm1_grasp_sub = self.create_subscription( ActuatorCmd, "/ambf/env/ghosts/psm1/Actuator0/Command", self.grasp_psm1_callback, 1)
         self.psm2_grasp_sub = self.create_subscription( ActuatorCmd, "/ambf/env/ghosts/psm2/Actuator0/Command", self.grasp_psm2_callback, 1)
@@ -112,7 +127,6 @@ class WireTrackerNode(Node):
         self.twist_sub_L = self.create_subscription(TwistStamped, '/MTML/measured_cv', self.twist_callback_L, 1)
         self.twist_sub_R = self.create_subscription(TwistStamped, '/MTMR/measured_cv', self.twist_callback_R, 1)
 
-        self.prev_torque = np.array([0.0, 0.0, 0.0])
         
         # Publish the absolute oriention flag once
         abs_flag = Bool()
@@ -129,6 +143,19 @@ class WireTrackerNode(Node):
         server_socket.bind((host_ip, port))
         server_socket.listen(1)
         self.client_socket, client_address = server_socket.accept()
+    
+    def wire_contact_sensor_calback(self, msg):
+        # Initialize an empty list to store the names
+        sensed_objects = []
+        
+        # Check if contact_events has any items and loop through them
+        if msg.contact_events:
+            for event in msg.contact_events:
+                # Extract the name as a clean string and add it to our list
+                object_name_str = event.object_name.data
+                sensed_objects.append(object_name_str)     
+        # Save the final list of strings to your class variable
+        self.wire_contact_sensor = sensed_objects
     
     def ring_contact_sensor_callback(self, msg):
         # Initialize an empty list to store the names
@@ -546,10 +573,10 @@ class WireTrackerNode(Node):
         return False
 
     def wire_touched(self, min_distance):
-        touching_wire = any("wire" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.ring_contact_sensor)
-        if not touching_wire:
+        self.ring_touching_wire = any("wire" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.ring_contact_sensor)
+        if not self.ring_touching_wire:
             self.previous_not_touched = True
-        if self.previous_not_touched and touching_wire and (self.ring_grasped_psm1 or self.ring_grasped_psm2) and self.start_flag_sent and not self.end_flag_sent:
+        if self.previous_not_touched and self.ring_touching_wire and (self.ring_grasped_psm1 or self.ring_grasped_psm2) and self.start_flag_sent and not self.end_flag_sent:
             self.previous_not_touched = False
             return True
         return False  
@@ -560,7 +587,11 @@ class WireTrackerNode(Node):
         if self.ring_was_held and not (self.ring_grasped_psm1 or self.ring_grasped_psm2) and self.start_flag_sent and not self.end_flag_sent:
             self.ring_was_held = False
             return True
-        return False  
+        return False 
+
+    def ring_came_off(self, min_distance):
+        if min_distance > 0.015:
+            self.ring_came_off = True
     
     def task_ended(self, min_distance):
         end_ring_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.end_trigger)
@@ -568,7 +599,31 @@ class WireTrackerNode(Node):
             return True
         return False
 
+    def contact_time(self):
+        if self.ring_touching_wire and not self.prev_started:
+            self.start_time = time.perf_counter()
+            self.prev_started = True
+        elif not self.ring_touching_wire and self.prev_started:
+            end_time = time.perf_counter()
+            time_elapsed = end_time - self.start_time
+            self.total_time += time_elapsed
+            self.prev_started = False
 
+    def psm_touch_wire(self):
+        obj_name = obj.data if hasattr(obj, 'data') else str(obj)
+        for obj in self.wire_contact_sensor:
+            if "base" not in obj_name or "ring" not in obj_name:
+                return True
+        return False
+    
+    def trial_time(self):
+        if self.task_started and not self.trial_started and not self.task_ended:
+            self.trial_start = time.perf_counter()
+            self.trial_started = True
+        elif self.task_ended and self.trial_started:
+            self.trial_end = time.perf_counter()
+            self.trial_duration = (self.trial_end - self.trial_start) / 60
+            self.trial_started = False
 
 
 # ---------------------- Control Loop ----------------------
@@ -614,7 +669,7 @@ class WireTrackerNode(Node):
         torque_total_L = -torque_angular - torque_damping_L # negative torque angular to resist error rotation, negative dmaping roates in opposite direction of mtm
         torque_total_R = -torque_angular - torque_damping_R # negative torque angular to resist error rotation
 
-        self.transform_and_publish_wrench(max_force, max_torque, f_total_linear_L, f_total_linear_R, torque_total_L, torque_total_R)  # Publish the total linear force to both MTMs
+        #self.transform_and_publish_wrench(max_force, max_torque, f_total_linear_L, f_total_linear_R, torque_total_L, torque_total_R)  # Publish the total linear force to both MTMs
         #print(f"raw torque: {torque_angular}")
         print(f"angular error deg: {angular_error_deg}")
 
@@ -643,16 +698,25 @@ class WireTrackerNode(Node):
             #self.client_socket.sendall(bytes([5]))
             print("Passed checkpoint 5")
         if self.wire_touched(min_distance):
-            self.count += 1
+            self.count_ring += 1
             #self.client_socket.sendall(bytes([6]))
-            print(f"Wire Touched {self.count}")
+            print(f"Ring Touched Wire {self.count}")
         if self.ring_dropped(min_distance): # test on dvrk if this sends multiple messages during one action of dropping
             #self.client_socket.sendall(bytes([7]))
             print("Ring Dropped")
+        if self.ring_came_off(min_distance):
+            #self.client_socket.sendall(bytes([8]))
+            print("Ring Came Off")
+        if self.psm_touch_wire():
+            #self.client_socket.sendall(bytes([9]))
+            self.count_psm += 1
+            print(f"PSM Touched Wire {self.count_psm}") 
         if self.task_ended(min_distance) and not self.end_flag_sent:
             self.end_flag_sent = True
-            #self.client_socket.sendall(bytes([8]))
+            #self.client_socket.sendall(bytes([10]))
             print("Task Ended")
+            print(f"Total Contact Time: {self.total_time} seconds")
+            print(f"Trial Duration: {self.trial_duration} minutes")
 
     def run_control_loop(self):
         t1 = datetime.now()

@@ -1,23 +1,23 @@
 bodies:
 - BODY base
 - BODY CameraFrame
+- BODY ring_visual
+- BODY wire_visual
+ghost objects:
 - BODY checkpoint1
 - BODY checkpoint2
 - BODY checkpoint3
 - BODY checkpoint4
 - BODY checkpoint5
 - BODY end_trigger
-- BODY ring_visual
 - BODY start_trigger
-- BODY wire_visual
-ghost objects: []
 soft bodies: []
 joints: []
-cameras:
-- camera
+cameras: []
 lights: []
 sensors:
 - SENSOR ring_contact_sensor
+- SENSOR wire_contact_sensor
 actuators: []
 high resolution path: high_res/
 low resolution path: low_res/
@@ -78,35 +78,6 @@ BODY base:
       g: 0.4
       r: 0.4
     transparency: 1.0
-camera:
-  name: camera
-  location:
-    x: 0.02921
-    y: 0.34556
-    z: 0.77166
-  look at:
-    x: 0.065
-    y: -0.63501
-    z: 0.5788
-  up:
-    x: 0.00703
-    y: -0.19273
-    z: 0.98123
-  clipping plane:
-    far: 1000.0
-    near: 0.10000000149011612
-  field view angle: 0.6911112070083618
-  monitor: 0
-  publish image: false
-  publish image interval: 1
-  publish image resolution:
-    height: 480
-    width: 640
-  publish depth: false
-  publish depth interval: 1
-  publish depth resolution:
-    height: 480
-    width: 640
 BODY CameraFrame:
   name: CameraFrame
   mesh: ''
@@ -540,7 +511,7 @@ BODY ring_visual:
 SENSOR ring_contact_sensor:
   name: ring_contact_sensor
   type: Contact
-  parent: ''
+  parent: 'ring_visual'
   location:
     orientation:
       p: -0.0
@@ -678,3 +649,20 @@ BODY wire_visual:
       g: 0.4
       r: 0.4
     transparency: 1.0
+SENSOR wire_contact_sensor:
+  name: wire_contact_sensor
+  type: Contact
+  parent: 'wire_visual'
+  location:
+    orientation:
+      p: -0.0
+      r: 0.0
+      y: 0.0
+    position:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+  visible: true
+  visible size: 0.004999999888241291
+  distance threshold: 0.0
+  process contact details: false
