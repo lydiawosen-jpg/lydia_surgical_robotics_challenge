@@ -66,10 +66,12 @@ class WireTrackerNode(Node):
        
         #contact timer
         self.prev_started = False
-        self.total_time = 0
+        self.total_time = 0.0
         self.start_time = 0.0
+        self.last_contact_time = 0.0
 
         self.trial_started = False
+        self.trial_duration = 0.0
        
        
         self.start_flag_sent = False 
@@ -85,7 +87,6 @@ class WireTrackerNode(Node):
         self.checkpoint5 = []
         self.checkpoint5_sent = False
         self.ring_was_held = False
-        self.ring_came_off = False
         self.end_trigger = []
         self.end_flag_sent = False
         self.previous_not_touched = False
@@ -103,7 +104,7 @@ class WireTrackerNode(Node):
         self.wire_contact_sensor = []
         self.wire_contact_sensor_sub = self.create_subscription(ContactSensorState, '/ambf/env/phantom/wire_contact_sensor/State', self.wire_contact_sensor_callback, 1)
         self.count_psm = 0
-
+        self.previous_psm_not_touched = False
 
         self.psm1_grasp_sub = self.create_subscription( ActuatorCmd, "/ambf/env/ghosts/psm1/Actuator0/Command", self.grasp_psm1_callback, 1)
         self.psm2_grasp_sub = self.create_subscription( ActuatorCmd, "/ambf/env/ghosts/psm2/Actuator0/Command", self.grasp_psm2_callback, 1)
@@ -144,7 +145,7 @@ class WireTrackerNode(Node):
         server_socket.listen(1)
         self.client_socket, client_address = server_socket.accept()
     
-    def wire_contact_sensor_calback(self, msg):
+    def wire_contact_sensor_callback(self, msg):
         # Initialize an empty list to store the names
         sensed_objects = []
         
@@ -290,35 +291,35 @@ class WireTrackerNode(Node):
 
 
 
-    def compute_rotational_error(self, closest_t, T_ring_wire, winning_segment_points):
-        P0, P1, P2, P3 = winning_segment_points
+    # def compute_rotational_error(self, closest_t, T_ring_wire, winning_segment_points):
+    #     P0, P1, P2, P3 = winning_segment_points
         
-        # Calculate derivative/tangent vector at closest_t
-        tangent = (3 * (1 - closest_t)**2 * (P1 - P0) + 
-                6 * (1 - closest_t) * closest_t * (P2 - P1) + 
-                3 * closest_t**2 * (P3 - P2))
+    #     # Calculate derivative/tangent vector at closest_t
+    #     tangent = (3 * (1 - closest_t)**2 * (P1 - P0) + 
+    #             6 * (1 - closest_t) * closest_t * (P2 - P1) + 
+    #             3 * closest_t**2 * (P3 - P2))
 
-        # Normalize tangent vector (unit vector)
-        tangent_norm = np.linalg.norm(tangent)
-        if tangent_norm < 1e-6:
-            u_tangent = np.array([0.0, 0.0, 1.0]) # Fallback unit vector if tangent is 0
-        else:
-            u_tangent = tangent / tangent_norm
+    #     # Normalize tangent vector (unit vector)
+    #     tangent_norm = np.linalg.norm(tangent)
+    #     if tangent_norm < 1e-6:
+    #         u_tangent = np.array([0.0, 0.0, 1.0]) # Fallback unit vector if tangent is 0
+    #     else:
+    #         u_tangent = tangent / tangent_norm
 
-        # Extract Ring's local Z-axis unit vector relative to wire frame
-        u_ring_z = np.array([T_ring_wire.M.UnitZ().x(), 
-                            T_ring_wire.M.UnitZ().y(), 
-                            T_ring_wire.M.UnitZ().z()])
+    #     # Extract Ring's local Z-axis unit vector relative to wire frame
+    #     u_ring_z = np.array([T_ring_wire.M.UnitZ().x(), 
+    #                         T_ring_wire.M.UnitZ().y(), 
+    #                         T_ring_wire.M.UnitZ().z()])
 
-        # Compute dot product and clip to [-1.0, 1.0] to prevent arccos bounds errors
-        dot_product = np.dot(u_tangent, u_ring_z)
-        clipped_dot = np.clip(dot_product, -1.0, 1.0)
+    #     # Compute dot product and clip to [-1.0, 1.0] to prevent arccos bounds errors
+    #     dot_product = np.dot(u_tangent, u_ring_z)
+    #     clipped_dot = np.clip(dot_product, -1.0, 1.0)
         
-        # Calculate unsigned angular error in degrees
-        angular_error_rad = np.arccos(clipped_dot)
-        angular_error_deg = np.degrees(angular_error_rad)
+    #     # Calculate unsigned angular error in degrees
+    #     angular_error_rad = np.arccos(clipped_dot)
+    #     angular_error_deg = np.degrees(angular_error_rad)
 
-        return angular_error_deg, u_tangent, u_ring_z, dot_product
+    #     return angular_error_deg, u_tangent, u_ring_z, dot_product
 
 
 
@@ -357,40 +358,40 @@ class WireTrackerNode(Node):
     
     
     
-    # OG def compute_rotational_error(self,closest_t, T_ring_wire, winning_segment_points):
-    #     # Calculate the tangent vector (derivative) at your closest_t
-    #     P0, P1, P2, P3 = winning_segment_points
-         
-    #     # Calculate the tangent vector (derivative) at your closest_t
-    #     P0, P1, P2, P3 = winning_segment_points
-    #     tangent = (3 * (1 - closest_t)**2 * (P1 - P0) + 
-    #             6 * (1 - closest_t) * closest_t * (P2 - P1) + 
-    #             3 * closest_t**2 * (P3 - P2)) # this should be a function since its the same excpet for one variable, to make it go faster
+    def tangent_vector(self, closest_t, P0, P1, P2, P3):
+        return (3 * (1 - closest_t)**2 * (P1 - P0) + 
+                6 * (1 - closest_t) * closest_t * (P2 - P1) + 
+                3 * closest_t**2 * (P3 - P2))
+    
+    def compute_rotational_error(self,closest_t, T_ring_wire, winning_segment_points):
+        # Calculate the tangent vector (derivative) at your closest_t
+        P0, P1, P2, P3 = winning_segment_points
+        tangent = self.tangent_vector(closest_t, P0, P1, P2, P3)
 
-    #     # Convert tangent into a unit vector
-    #     u_tangent = tangent / np.linalg.norm(tangent)
+        # Convert tangent into a unit vector
+        u_tangent = tangent / np.linalg.norm(tangent)
+        
 
-    #     # Extract the Ring's Z-axis unit vector from its KDL rotation matrix
-    #     # In PyKDL, Frame.M.UnitZ() gives the local Z axis vector relative to the wire frame
-    #     u_ring_z = np.array([T_ring_wire.M.UnitZ().x(), 
-    #                         T_ring_wire.M.UnitZ().y(), 
-    #                         T_ring_wire.M.UnitZ().z()])
+        # Extract the Ring's Z-axis unit vector from its KDL rotation matrix
+        # In PyKDL, Frame.M.UnitZ() gives the local Z axis vector relative to the wire frame
+        u_ring_z = np.array([T_ring_wire.M.UnitZ().x(), 
+                            T_ring_wire.M.UnitZ().y(), 
+                            T_ring_wire.M.UnitZ().z()])
 
-    #     # Calculate the angular error
-    #     dot_product = np.dot(u_tangent, u_ring_z)
+        # Calculate the angular error
+        dot_product = np.dot(u_tangent, u_ring_z)
 
-    #     # Use absolute value if direction/flipping doesn't matter
-    #     #dot_product_val = abs(dot_product) 
+        # Use absolute value if direction/flipping doesn't matter
+        #dot_product_val = abs(dot_product) 
 
-    #     clipped_dot = np.clip(dot_product, -1.0, 1.0) # Clipping to avoid floating-point math errors outside [-1, 1]
-    #     angular_error_rad = np.arccos(clipped_dot)
-    #     angular_error_deg = np.degrees(angular_error_rad)
+        clipped_dot = np.clip(dot_product, -1.0, 1.0) # Clipping to avoid floating-point math errors outside [-1, 1]
+        angular_error_rad = np.arccos(clipped_dot)
+        angular_error_deg = np.degrees(angular_error_rad)
 
-    #     # Log new error metrics
-    #     #self.get_logger().info(f"Rotational Erro$ T_camera_worldr: {angular_error_deg:.2f}°")
+        # Log new error metrics
+        #self.get_logger().info(f"Rotational Erro$ T_camera_worldr: {angular_error_deg:.2f}°")
 
-    #     # break down rotaional into which direction
-    #     return angular_error_deg, u_tangent, u_ring_z, dot_product  
+        return angular_error_deg, u_tangent, u_ring_z, dot_product  
 
 
     def compute_linear_force(self, min_distance, closest_wire_point, ring_com, kp_pos, linear_deadband):
@@ -425,28 +426,28 @@ class WireTrackerNode(Node):
     
 
 
-    def compute_torque(self, angular_error_deg, u_tangent, u_ring_z, dot_product, kp_rot, angular_deadband):
-        # Deadband check
-        if angular_error_deg < angular_deadband:
-            return np.array([0.0, 0.0, 0.0])
+    # def compute_torque(self, angular_error_deg, u_tangent, u_ring_z, dot_product, kp_rot, angular_deadband):
+    #     # Deadband check
+    #     if angular_error_deg < angular_deadband:
+    #         return np.array([0.0, 0.0, 0.0])
 
-        # Direct cross product gives the continuous axis of rotation from u_ring_z toward u_tangent
-        rotation_axis = np.cross(u_ring_z, u_tangent)
-        axis_norm = np.linalg.norm(rotation_axis)
+    #     # Direct cross product gives the continuous axis of rotation from u_ring_z toward u_tangent
+    #     rotation_axis = np.cross(u_ring_z, u_tangent)
+    #     axis_norm = np.linalg.norm(rotation_axis)
 
-        # Singularity Check: If vectors are aligned (0° or 180°), axis_norm goes to 0.
-        # We exit safely to avoid dividing by zero or magnifying floating-point noise.
-        if axis_norm < 1e-3:
-            return np.array([0.0, 0.0, 0.0])
+    #     # Singularity Check: If vectors are aligned (0° or 180°), axis_norm goes to 0.
+    #     # We exit safely to avoid dividing by zero or magnifying floating-point noise.
+    #     if axis_norm < 1e-3:
+    #         return np.array([0.0, 0.0, 0.0])
 
-        # Unit axis of rotation
-        u_rotation_axis = rotation_axis / axis_norm
+    #     # Unit axis of rotation
+    #     u_rotation_axis = rotation_axis / axis_norm
 
-        # Calculate proportional torque magnitude
-        effective_angular_error_rad = np.radians(angular_error_deg - angular_deadband)
-        torque_angular = kp_rot * effective_angular_error_rad * u_rotation_axis
+    #     # Calculate proportional torque magnitude
+    #     effective_angular_error_rad = np.radians(angular_error_deg - angular_deadband)
+    #     torque_angular = kp_rot * effective_angular_error_rad * u_rotation_axis
 
-        return torque_angular
+    #     return torque_angular
 
 
 
@@ -461,21 +462,51 @@ class WireTrackerNode(Node):
     #     return torque_angular
     
     
-    #  OG def compute_torque(self, angular_error_deg, u_tangent, u_ring_z, dot_product, kp_rot, angular_deadband):
-    #     if angular_error_deg < angular_deadband:
-    #         torque_angular = np.array([0.0, 0.0, 0.0])
-    #     else:
-    #         # Calculate the axis of rotation for the angular error
-    #         u_ring_z_aligned = u_ring_z #-u_ring_z if dot_product < 0 else u_ring_z
-    #         rotation_axis = np.cross(u_tangent, u_ring_z_aligned)
-    #         if np.linalg.norm(rotation_axis) > 1e-6:  # safety check - cross product with zero angle is zero vector, norm of this would cause dividing by zero
-    #             u_rotation_axis = rotation_axis / np.linalg.norm(rotation_axis)
-    #         else:
-    #             u_rotation_axis = np.array([0.0, 0.0, 0.0])  # No meaningful rotation axis
+    
+    
 
-    #         effective_angular_error_rad = np.radians(angular_error_deg - angular_deadband)
-    #         torque_angular = kp_rot * effective_angular_error_rad * u_rotation_axis # torque is in direction of error
-    #     return torque_angular # is a numpy array realtive to wire
+    def limit_tangent_rate(self, u_tangent, max_angle_change_rad=0.05):
+        """
+        Limits how much the unit tangent vector can rotate in a single frame.
+        max_angle_change_rad: Max allowed rotation per frame (e.g., ~2.8 degrees).
+        """
+        if not hasattr(self, 'prev_u_tangent') or self.prev_u_tangent is None:
+            self.prev_u_tangent = u_tangent
+            return u_tangent
+
+        # Calculate angle between previous tangent and new tangent
+        dot = np.clip(np.dot(self.prev_u_tangent, u_tangent), -1.0, 1.0)
+        angle = np.arccos(dot)
+        #print(f"Angle between tangents: {angle}")
+
+        if angle > max_angle_change_rad and angle > 1e-6:
+            # Interpolate towards the new tangent, but cap the step size
+            alpha = max_angle_change_rad / angle
+            filtered_tangent = (1 - alpha) * self.prev_u_tangent + alpha * u_tangent
+            filtered_tangent /= np.linalg.norm(filtered_tangent) # Re-normalize
+        else:
+            filtered_tangent = u_tangent
+
+        self.prev_u_tangent = filtered_tangent
+        return filtered_tangent
+    
+    
+    
+    def compute_torque(self, angular_error_deg, filtered_tangent, u_ring_z, dot_product, kp_rot, angular_deadband):
+        if angular_error_deg < angular_deadband:
+            torque_angular = np.array([0.0, 0.0, 0.0])
+        else:
+            # Calculate the axis of rotation for the angular error
+            u_ring_z_aligned = -u_ring_z if dot_product < 0 else u_ring_z
+            rotation_axis = np.cross(u_ring_z_aligned, filtered_tangent) # restoring torque that drive ring back into alignment
+            if np.linalg.norm(rotation_axis) > 1e-6:  # safety check - cross product with zero angle is zero vector, norm of this would cause dividing by zero
+                u_rotation_axis = rotation_axis / np.linalg.norm(rotation_axis)
+            else:
+                u_rotation_axis = np.array([0.0, 0.0, 0.0])  # No meaningful rotation axis
+
+            effective_angular_error_rad = np.radians(angular_error_deg - angular_deadband)
+            torque_angular = kp_rot * effective_angular_error_rad * u_rotation_axis # torque is in direction of error
+        return torque_angular # is a numpy array realtive to wire
 
     def compute_torque_damping_L(self, kd_rot):
         mtmL_ang_vel = np.array([self.latest_twist_L.twist.angular.x, self.latest_twist_L.twist.angular.y, self.latest_twist_L.twist.angular.z])
@@ -573,13 +604,13 @@ class WireTrackerNode(Node):
         return False
 
     def wire_touched(self, min_distance):
-        self.ring_touching_wire = any("wire" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.ring_contact_sensor)
-        if not self.ring_touching_wire:
+        ring_touching_wire = any("wire" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.ring_contact_sensor)
+        if not ring_touching_wire:
             self.previous_not_touched = True
-        if self.previous_not_touched and self.ring_touching_wire and (self.ring_grasped_psm1 or self.ring_grasped_psm2) and self.start_flag_sent and not self.end_flag_sent:
+        if self.previous_not_touched and ring_touching_wire and (self.ring_grasped_psm1 or self.ring_grasped_psm2) and self.start_flag_sent and not self.end_flag_sent:
             self.previous_not_touched = False
             return True
-        return False  
+        return False 
     
     def ring_dropped(self, min_distance):
         if self.ring_grasped_psm1 or self.ring_grasped_psm2:
@@ -591,7 +622,8 @@ class WireTrackerNode(Node):
 
     def ring_came_off(self, min_distance):
         if min_distance > 0.015:
-            self.ring_came_off = True
+            return True
+        return False
     
     def task_ended(self, min_distance):
         end_ring_sensed = any("ring" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.end_trigger)
@@ -600,34 +632,59 @@ class WireTrackerNode(Node):
         return False
 
     def contact_time(self):
-        if self.ring_touching_wire and not self.prev_started:
+        is_ring_touching_wire = any("wire" in (obj.data if hasattr(obj, 'data') else str(obj)) for obj in self.ring_contact_sensor)
+        if is_ring_touching_wire and not self.prev_started and self.start_flag_sent:
             self.start_time = time.perf_counter()
             self.prev_started = True
-        elif not self.ring_touching_wire and self.prev_started:
+        elif not is_ring_touching_wire and self.prev_started:
             end_time = time.perf_counter()
             time_elapsed = end_time - self.start_time
             self.total_time += time_elapsed
             self.prev_started = False
 
-    def psm_touch_wire(self):
-        obj_name = obj.data if hasattr(obj, 'data') else str(obj)
-        for obj in self.wire_contact_sensor:
-            if "base" not in obj_name or "ring" not in obj_name:
-                return True
-        return False
-    
-    def trial_time(self):
-        if self.task_started and not self.trial_started and not self.task_ended:
-            self.trial_start = time.perf_counter()
-            self.trial_started = True
-        elif self.task_ended and self.trial_started:
-            self.trial_end = time.perf_counter()
-            self.trial_duration = (self.trial_end - self.trial_start) / 60
-            self.trial_started = False
+    # def contact_time(self, is_ring_touching_wire):
+    #     if is_ring_touching_wire:
+    #         current_time = time.perf_counter()
+    #         if not self.prev_started:
+    #             # Contact just started
+    #             self.last_contact_time = current_time
+    #             print(self.last_contact_time)
+    #             self.prev_started = True
+    #             print(self.prev_started)
+    #         else:
+    #             # Contact is continuing: add time elapsed since the last frame
+    #             print("entered")
+    #             dt = current_time - self.last_contact_time
+    #             print(f"Contact Time Increment: {dt} seconds")
+    #             self.total_time += dt
+    #             self.last_contact_time = current_time
+        # else:
+        #     # Contact broke
+        #     self.prev_started = False
 
+    def psm_touch_wire(self):
+        psm_touching_wire = False
+        for obj in self.wire_contact_sensor:
+            obj_name = obj.data if hasattr(obj, 'data') else str(obj)
+            if "base" not in obj_name or "ring" not in obj_name:
+                psm_touching_wire = True
+
+        if not psm_touching_wire:
+            self.previous_psm_not_touched = True
+        if self.previous_psm_not_touched and psm_touching_wire and self.start_flag_sent and not self.end_flag_sent:
+            self.previous_psm_not_touched = False
+            return True
+        return False 
+            
+
+    def ring_came_off(self, min_distance):
+        if min_distance > 0.015:
+            return True
+        return False
 
 # ---------------------- Control Loop ----------------------
     def control_loop(self):
+        # PARAMETERS FOR FORCE FEEDBACK
         max_force = 2.0 # N
         max_torque = 0.5 #0.05 # N·m
         kp_pos = 0#120  # Spring constant for position (N/m)
@@ -637,44 +694,29 @@ class WireTrackerNode(Node):
         linear_deadband = 0.0001 # meters, distance from wire centerline where no force is applied
         angular_deadband = 0  # degrees, angle from wire tangent where no force is applied
         
+        # EARLT SAFETT CHECK
         if (self.latest_ring_msg is None or
             self.latest_T_wire_world is None or
             self.latest_T_camera_world is None or
             self.latest_twist_L is None or
             self.latest_twist_R is None):
             return
+        
+        # GATHER VARIABLES FROM AMBF
         ring_msg = self.latest_ring_msg
         T_ring_wire = self.get_ring_frame_in_wire(ring_msg)
         ring_com = np.array([T_ring_wire.p.x(), T_ring_wire.p.y(), T_ring_wire.p.z()])
         closest_t, min_distance, closest_wire_point, winning_segment_points = self.get_closest_wire_point(ring_com)
-        if min_distance > 0.015:
-            print("Force feedback disabled, ring has come off the wire")
-            return
-        f_linear, u_vector_ring_to_wire = self.compute_linear_force(min_distance, closest_wire_point, ring_com, kp_pos, linear_deadband)
-        f_linear_damping_L = self.compute_linear_damping_L(kd_pos, u_vector_ring_to_wire)
-        f_linear_damping_R = self.compute_linear_damping_R(kd_pos, u_vector_ring_to_wire)
-        f_total_linear_L = f_linear - f_linear_damping_L
-        f_total_linear_R = f_linear - f_linear_damping_R
         
         
-        angular_error_deg, u_tangent, u_ring_z, dot_product = self.compute_rotational_error(closest_t, T_ring_wire, winning_segment_points)
-        torque_angular = self.compute_torque(angular_error_deg, u_tangent, u_ring_z, dot_product, kp_rot, angular_deadband)
-        # OG angular_error_deg, u_rotation_axis = self.compute_rotational_error(closest_t, T_ring_wire, winning_segment_points)
-        # OG torque_angular = self.compute_torque(angular_error_deg, u_rotation_axis, kp_rot, angular_deadband)
+        # UPDATE TIMER
+        self.contact_time()
         
-        #angular_error_deg, u_tangent, u_ring_z, dot_product = self.compute_rotational_error(closest_t, T_ring_wire, winning_segment_points)
-        #torque_angular = self.compute_torque(angular_error_deg, u_tangent, u_ring_z, dot_product, kp_rot, angular_deadband)
-        torque_damping_L = self.compute_torque_damping_L(kd_rot)
-        torque_damping_R = self.compute_torque_damping_R(kd_rot)
-        torque_total_L = -torque_angular - torque_damping_L # negative torque angular to resist error rotation, negative dmaping roates in opposite direction of mtm
-        torque_total_R = -torque_angular - torque_damping_R # negative torque angular to resist error rotation
-
-        #self.transform_and_publish_wrench(max_force, max_torque, f_total_linear_L, f_total_linear_R, torque_total_L, torque_total_R)  # Publish the total linear force to both MTMs
-        #print(f"raw torque: {torque_angular}")
-        print(f"angular error deg: {angular_error_deg}")
-
+        
+        # CHECKPOINTS AND EVENT LOGIC
         if self.task_started(min_distance) and not self.start_flag_sent:
             self.start_flag_sent = True
+            self.trial_start = time.perf_counter()
             #self.client_socket.sendall(bytes([0])) 
             print("Task Started")
         if self.checkpoint1_passed(min_distance) and not self.checkpoint1_sent: # can make list of these checkpoint and run through them
@@ -700,27 +742,63 @@ class WireTrackerNode(Node):
         if self.wire_touched(min_distance):
             self.count_ring += 1
             #self.client_socket.sendall(bytes([6]))
-            print(f"Ring Touched Wire {self.count}")
+            print(f"Ring Touched Wire: {self.count_ring}")
         if self.ring_dropped(min_distance): # test on dvrk if this sends multiple messages during one action of dropping
             #self.client_socket.sendall(bytes([7]))
             print("Ring Dropped")
-        if self.ring_came_off(min_distance):
-            #self.client_socket.sendall(bytes([8]))
-            print("Ring Came Off")
-        if self.psm_touch_wire():
-            #self.client_socket.sendall(bytes([9]))
-            self.count_psm += 1
-            print(f"PSM Touched Wire {self.count_psm}") 
+        # if self.ring_came_off(min_distance):
+        #     #self.client_socket.sendall(bytes([8]))
+        #     print("Ring Came Off")
+        # if self.psm_touch_wire():
+        #     #self.client_socket.sendall(bytes([9]))
+        #     self.count_psm += 1
+        #     print(f"PSM Touched Wire {self.count_psm}") 
         if self.task_ended(min_distance) and not self.end_flag_sent:
             self.end_flag_sent = True
             #self.client_socket.sendall(bytes([10]))
             print("Task Ended")
-            print(f"Total Contact Time: {self.total_time} seconds")
-            print(f"Trial Duration: {self.trial_duration} minutes")
+            print(f"Total Contact Time: {self.total_time:.2f} seconds")
+            self.trial_end = time.perf_counter()
+            self.trial_duration = (self.trial_end - self.trial_start)
+            print(f"Trial Duration: {self.trial_duration:.2f} seconds")
+
+        
+
+        # RING CAME OFF SAFETY CHECK
+        if self.ring_came_off(min_distance):
+            zero_vec = PyKDL.Vector(0.0, 0.0, 0.0)
+            self.transform_and_publish_wrench(max_force, max_torque, zero_vec, zero_vec, zero_vec, zero_vec)
+            print("Ring has come off the wire, force feedback disabled")
+            return
+        
+        # COMPUTE FORCE FEEDBACK
+        f_linear, u_vector_ring_to_wire = self.compute_linear_force(min_distance, closest_wire_point, ring_com, kp_pos, linear_deadband)
+        f_linear_damping_L = self.compute_linear_damping_L(kd_pos, u_vector_ring_to_wire)
+        f_linear_damping_R = self.compute_linear_damping_R(kd_pos, u_vector_ring_to_wire)
+        f_total_linear_L = f_linear - f_linear_damping_L
+        f_total_linear_R = f_linear - f_linear_damping_R
+        
+        
+        # angular_error_deg, u_tangent, u_ring_z, dot_product = self.compute_rotational_error(closest_t, T_ring_wire, winning_segment_points)
+        # torque_angular = self.compute_torque(angular_error_deg, u_tangent, u_ring_z, dot_product, kp_rot, angular_deadband)
+        # angular_error_deg, u_rotation_axis = self.compute_rotational_error(closest_t, T_ring_wire, winning_segment_points)
+        # torque_angular = self.compute_torque(angular_error_deg, u_rotation_axis, kp_rot, angular_deadband)
+        
+        angular_error_deg, u_tangent, u_ring_z, dot_product = self.compute_rotational_error(closest_t, T_ring_wire, winning_segment_points)
+        filtered_tangent = self.limit_tangent_rate(u_tangent, max_angle_change_rad=0.05)
+        torque_angular = self.compute_torque(angular_error_deg, filtered_tangent, u_ring_z, dot_product, kp_rot, angular_deadband)
+        torque_damping_L = self.compute_torque_damping_L(kd_rot)
+        torque_damping_R = self.compute_torque_damping_R(kd_rot)
+        torque_total_L = torque_angular - torque_damping_L # negative dmaping roates in opposite direction of mtm
+        torque_total_R = torque_angular - torque_damping_R 
+
+        self.transform_and_publish_wrench(max_force, max_torque, f_total_linear_L, f_total_linear_R, torque_total_L, torque_total_R)  # Publish the total linear force to both MTMs
+        #print(f"raw torque: {torque_angular}")
+        #print(f"angular error deg: {angular_error_deg}")
 
     def run_control_loop(self):
         t1 = datetime.now()
-        rate_hz = 200 # number of updates per second
+        rate_hz = 600 # number of updates per second
         period = 1.0 / rate_hz # wait this many seconds before each update
         while rclpy.ok(): # returns true as long as ros2 is still running and hasn't been interrupted by ctrl c
             self.control_loop()
