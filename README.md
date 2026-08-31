@@ -78,6 +78,9 @@ Then run one of the corresponding Python scripts:
 
 Refer to the `README` in the scripts folder for further information
 
+## Lydia's Ring and Wire Task Operation
+Go to the convex-hull-ring branch, then in scripts -> New-haptic-algorithm, the main operation script is called "Ros_tracking_min_distance.py" which was made for the ring and wire task. This script finds the closest point on the wire, calculates the errors, applies the forces and sends flags to COBI studio. After starting the dvrk, run the environment through this file "run_env_ring_wire_LND_420006.sh" then run the normal teleoperation script, then run the main script. If you restart the task end the main script and run again once the task has been restarted since the script is dependent on the ring passing the start trigger.
+
 # 6. Citation
 If you find this work useful, please cite it as:
 
