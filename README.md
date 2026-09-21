@@ -84,6 +84,13 @@ To manually control which objects are spawned in the scene, review the `.sh` scr
 ### Lydia's Ring and Wire Task Operation
 Go to the convex-hull-ring branch, then in scripts -> New-haptic-algorithm, the main operation script is called "Ros_tracking_min_distance.py" which was made for the ring and wire task. This script finds the closest point on the wire, calculates the errors, applies the forces and sends flags to COBI studio. After starting the dvrk, run the environment through this file "run_env_ring_wire_LND_420006.sh" then run the normal teleoperation script, then run the main script. If you restart the task end the main script and run again once the task has been restarted since the script is dependent on the ring passing the start trigger.
 
+### Lydia's instructions for testing force feedback using script to move ring
+First, like normal start the dvrk then run the ring and wire environment. Then run the only_force_feedback.py script then run the move_ring_along_wire.py script using flag --perturb to turn on perturbations.
+Notes:
+- only need to press coag pedal to allow forces to be applied to mtms
+- I was having trouble getting the ring's center to stay aligned as it was going through the peak and trough sections however the intermediate sections where the wire isn't curved the ring stays pretty aligned. Therefore I applied one translational perturbation at the first straight section before the first peak, and one rotaional perturbation at the third straight section which is after the first trough and before the second peak.
+- I was troubleshooting a lot to get the ring to be aligned for the whole wire path and things worth noting if you want to understand the script is that for the wire, the point where t=1 is the left end of the wire and t=0 is the right end, however the ends of the wire are embedded into the base therefore the start position of the ring is at actually at t=0.986
+
 ## Citation
 If you find this work useful, please cite it as:
 
