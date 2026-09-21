@@ -10,7 +10,7 @@ import os
 from argparse import ArgumentParser
 
 # import the centerline tools from mentor's repo
-sys.path.append(os.path.expanduser('~/mesh_to_bezier_curve'))
+sys.path.append(os.path.join(os.path.dirname(__file__), 'mesh_to_bezier_curve'))
 from find_mesh_centerline import extract_bspline_from_obj, basis_values
 
 
@@ -22,7 +22,7 @@ class RingMoverNode(Node):
         self.get_logger().info(f"Perturbations enabled: {enable_perturbations}")
 
         # Load centerline from wire mesh OBJ
-        mesh_path = '/mnt/c/Users/lydia/Documents/Hopkins/lydia_surgical_robotics_challenge/ADF/Phantoms/ring_wire_env/high_res/wire_visual.OBJ'
+        mesh_path = os.path.join(os.path.dirname(__file__), 'mesh_to_bezier_curve', 'mesh', 'wire_visual.OBJ')
         self.control_points, self.knots, self.degree = extract_bspline_from_obj(
             mesh_path, num_slices=100
         )
