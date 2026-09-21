@@ -88,6 +88,7 @@ Go to the convex-hull-ring branch, then in scripts -> New-haptic-algorithm, the 
 First, like normal start the dvrk then run the ring and wire environment. Then run the only_force_feedback.py script then run the move_ring_along_wire.py script using flag --perturb to turn on perturbations.
 Notes:
 - only need to press coag pedal to allow forces to be applied to mtms
+- the only_force_feedback.py script uses the mesh method to define wire
 - I was having trouble getting the ring's center to stay aligned as it was going through the peak and trough sections however the intermediate sections where the wire isn't curved the ring stays pretty aligned. Therefore I applied one translational perturbation at the first straight section before the first peak, and one rotaional perturbation at the third straight section which is after the first trough and before the second peak.
 - I was troubleshooting a lot to get the ring to be aligned for the whole wire path and things worth noting if you want to understand the script is that for the wire, the point where t=1 is the left end of the wire and t=0 is the right end, however the ends of the wire are embedded into the base therefore the start position of the ring is at actually at t=0.986
 
