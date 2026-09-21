@@ -81,6 +81,9 @@ You can press `CTRL+R` to reset the rigid bodies in the simulation and `CTRL+V` 
 ### Launch Arguments
 To manually control which objects are spawned in the scene, review the `.sh` scripts in this folder. For a full list of arguments that can be passed to AMBF, refer to these [instructions](https://github.com/WPI-AIM/ambf/wiki/Command-Line-Arguments).
 
+### Lydia's Ring and Wire Task Operation
+Go to the convex-hull-ring branch, then in scripts -> New-haptic-algorithm, the main operation script is called "Ros_tracking_min_distance.py" which was made for the ring and wire task. This script finds the closest point on the wire, calculates the errors, applies the forces and sends flags to COBI studio. After starting the dvrk, run the environment through this file "run_env_ring_wire_LND_420006.sh" then run the normal teleoperation script, then run the main script. If you restart the task end the main script and run again once the task has been restarted since the script is dependent on the ring passing the start trigger.
+
 ## Citation
 If you find this work useful, please cite it as:
 
