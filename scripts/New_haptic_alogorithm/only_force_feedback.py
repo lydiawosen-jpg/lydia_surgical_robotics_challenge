@@ -41,6 +41,7 @@ class WireTrackerNode(Node):
         self.latest_twist_R = None
         self.coag_pressed = False
         self.prev_u_tangent = None
+        self.last_ring_cmd_time = None
 
         # SUBSCRIBERS
         self.coag_sub = self.create_subscription(
@@ -51,6 +52,10 @@ class WireTrackerNode(Node):
         self.ring_sub = self.create_subscription(
             RigidBodyState, '/ambf/env/phantom/ring_visual/State',
             self.ring_pose_callback, 1)
+        # heartbeat from move_ring_along_wire.py — used to zero wrench if it stops
+        self.ring_cmd_sub = self.create_subscription(
+            RigidBodyCmd, '/ambf/env/phantom/ring_visual/Command',
+            self.ring_cmd_callback, 1)
         self.camera_sub = self.create_subscription(
             RigidBodyState, '/ambf/env/phantom/CameraFrame/State',
             self.camera_pose_callback, 1)
@@ -108,6 +113,9 @@ class WireTrackerNode(Node):
 
     def coag_callback(self, msg):
         self.coag_pressed = msg.buttons[0]
+
+    def ring_cmd_callback(self, msg):
+        self.last_ring_cmd_time = time.time()
 
     def wire_pose_callback(self, msg_wire):
         wire_pos = PyKDL.Vector(
@@ -333,12 +341,13 @@ class WireTrackerNode(Node):
         # PARAMETERS — tune these
         max_force        = 2.0    # N
         max_torque       = 0.5    # N·m
-        kp_pos           = 50     # N/m
+        kp_pos           = 50    # N/m
         kd_pos           = 1.0    # N/(m/s)
-        kp_rot           = 0.1    # N·m/rad
+        kp_rot           = 0.01    # N·m/rad
         kd_rot           = 0.0    # N·m/(rad/s)
         linear_deadband  = 0.001  # m
         angular_deadband = 0.0    # deg
+        mover_timeout    = 0.5    # s — max silence from move_ring_along_wire.py before zeroing
 
         # SAFETY GUARD
         if (self.latest_ring_msg is None or
@@ -346,6 +355,13 @@ class WireTrackerNode(Node):
                 self.latest_T_camera_world is None or
                 (not self.simulation_mode and self.latest_twist_L is None) or
                 (not self.simulation_mode and self.latest_twist_R is None)):
+            return
+
+        # MOVER HEARTBEAT — zero wrench if move_ring_along_wire.py has stopped publishing
+        if (self.last_ring_cmd_time is not None and
+                time.time() - self.last_ring_cmd_time > mover_timeout):
+            print("Move ring command timeout — zeroing wrench")
+            self.zero_wrench()
             return
 
         # SNAPSHOT
@@ -432,6 +448,12 @@ class WireTrackerNode(Node):
             if remaining > 0:
                 time.sleep(remaining)
 
+    def zero_wrench(self):
+        """Publish zero force/torque to both MTMs, bypassing coag gating"""
+        zero_msg = WrenchStamped()
+        self.wrench_pub_L.publish(zero_msg)
+        self.wrench_pub_R.publish(WrenchStamped())
+
 
 def main(args=None):
     parser = ArgumentParser()
@@ -447,6 +469,7 @@ def main(args=None):
     except KeyboardInterrupt:
         pass
     finally:
+        tracker.zero_wrench()
         tracker.destroy_node()
         rclpy.shutdown()
 
