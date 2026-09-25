@@ -8,18 +8,35 @@ import time
 import sys
 import os
 from argparse import ArgumentParser
-
+from std_msgs.msg import Empty
+from sensor_msgs.msg import Joy
+from geometry_msgs.msg import PoseStamped
 # import the centerline tools from mentor's repo
 sys.path.append(os.path.join(os.path.dirname(__file__), 'mesh_to_bezier_curve'))
 from find_mesh_centerline import extract_bspline_from_obj, basis_values
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from surgical_robotics_challenge.utils.utilities import frame_to_pose, pose_to_frame
 
 
 class RingMoverNode(Node):
-    def __init__(self, enable_perturbations=False):
+    MTM_TRANSLATION_SCALE = 0.2
+
+    def __init__(self, enable_perturbations=False,
+                 enable_mtm_perturbations=False, pedal_traversal=False):
         super().__init__('ring_mover')
 
         self.enable_perturbations = enable_perturbations
+        self.enable_mtm_perturbations = enable_mtm_perturbations
+        self.pedal_traversal = pedal_traversal
         self.get_logger().info(f"Perturbations enabled: {enable_perturbations}")
+        self.get_logger().info(
+            f"Traversal mode: {'cam pedals' if pedal_traversal else 'automatic'}")
+        self.cam_plus_pressed = False
+        self.cam_minus_pressed = False
+        self.clutch_pressed = False
+        self.mtm_pose = None
+        self.mtm_pose_at_clutch = None
+        self.camera_pose = None
 
         # Load centerline from wire mesh OBJ
         mesh_path = os.path.join(os.path.dirname(__file__), 'mesh_to_bezier_curve', 'mesh', 'wire_visual.OBJ')
@@ -31,6 +48,21 @@ class RingMoverNode(Node):
         # Publisher to command ring pose
         self.ring_cmd_pub = self.create_publisher(
             RigidBodyCmd, '/ambf/env/phantom/ring_visual/Command', 1)
+        
+        self.reset_pub = self.create_publisher(
+            Empty, '/ambf/env/World/Command/Reset/Bodies', 1)
+
+        self.cam_plus_sub = self.create_subscription(
+            Joy, '/console1/focus_plus', self.cam_plus_callback, 1)
+        self.cam_minus_sub = self.create_subscription(
+            Joy, '/console1/focus_minus', self.cam_minus_callback, 1)
+        self.clutch_sub = self.create_subscription(
+            Joy, '/console1/clutch', self.clutch_callback, 1)
+        self.mtm_pose_sub = self.create_subscription(
+            PoseStamped, '/MTML/measured_cp', self.mtm_pose_callback, 1)
+        self.camera_sub = self.create_subscription(
+            RigidBodyState, '/ambf/env/phantom/CameraFrame/State',
+            self.camera_callback, 1)
 
         # Subscribe to wire pose to get transform to world frame
         self.T_wire_world = None
@@ -49,17 +81,33 @@ class RingMoverNode(Node):
     def wire_callback(self, msg):
         if self.T_wire_world is not None:
             return
-        wire_pos = PyKDL.Vector(
-            msg.pose.position.x,
-            msg.pose.position.y,
-            msg.pose.position.z)
-        wire_rot = PyKDL.Rotation.Quaternion(
-            msg.pose.orientation.x,
-            msg.pose.orientation.y,
-            msg.pose.orientation.z,
-            msg.pose.orientation.w)
-        self.T_wire_world = PyKDL.Frame(wire_rot, wire_pos)
-        self.get_logger().info(f"Wire pose locked in: ({wire_pos.x():.4f}, {wire_pos.y():.4f}, {wire_pos.z():.4f})")
+        self.T_wire_world = pose_to_frame(msg.pose)
+        self.get_logger().info(
+            f"Wire pose locked in: ({self.T_wire_world.p.x():.4f}, "
+            f"{self.T_wire_world.p.y():.4f}, {self.T_wire_world.p.z():.4f})")
+
+    def cam_plus_callback(self, msg):
+        self.cam_plus_pressed = bool(msg.buttons[0])
+
+    def cam_minus_callback(self, msg):
+        self.cam_minus_pressed = bool(msg.buttons[0])
+
+    def clutch_callback(self, msg):
+        pressed = bool(msg.buttons[0])
+        if pressed and not self.clutch_pressed and self.enable_mtm_perturbations:
+            self.mtm_pose_at_clutch = self.mtm_pose
+        elif not pressed:
+            self.mtm_pose_at_clutch = None
+        self.clutch_pressed = pressed
+
+    def mtm_pose_callback(self, msg):
+        self.mtm_pose = pose_to_frame(msg.pose)
+        if (self.clutch_pressed and self.enable_mtm_perturbations and
+            self.mtm_pose_at_clutch is None):
+            self.mtm_pose_at_clutch = self.mtm_pose
+
+    def camera_callback(self, msg):
+        self.camera_pose = pose_to_frame(msg.pose)
 
     def ring_callback(self, msg):
         self.current_ring_pose = msg
@@ -124,20 +172,49 @@ class RingMoverNode(Node):
         rot_world = self.T_wire_world.M * orientation_local
 
         msg = RigidBodyCmd()
-        msg.pose.position.x = pos_world.x()
-        msg.pose.position.y = pos_world.y()
-        msg.pose.position.z = pos_world.z()
-
-        q = rot_world.GetQuaternion()
-        msg.pose.orientation.x = q[0]
-        msg.pose.orientation.y = q[1]
-        msg.pose.orientation.z = q[2]
-        msg.pose.orientation.w = q[3]
+        msg.pose = frame_to_pose(PyKDL.Frame(rot_world, pos_world))
 
         msg.cartesian_cmd_type = 1
         self.ring_cmd_pub.publish(msg)
 
+    def get_traversal_direction(self):
+        if not self.pedal_traversal:
+            return -1.0
+        if self.cam_plus_pressed and not self.cam_minus_pressed:
+            return -1.0
+        if self.cam_minus_pressed and not self.cam_plus_pressed:
+            return 1.0
+        return 0.0
+
+    def get_clutch_perturbation(self):
+        if (not self.enable_mtm_perturbations or not self.clutch_pressed or
+            self.mtm_pose_at_clutch is None or self.mtm_pose is None or
+            self.camera_pose is None):
+            return np.zeros(3), PyKDL.Rotation.Identity()
+
+        mtm_base_to_camera = PyKDL.Rotation.RotX(-0.865)
+        translation_mtm = self.mtm_pose.p - self.mtm_pose_at_clutch.p
+        translation_camera = (self.MTM_TRANSLATION_SCALE *
+                      (mtm_base_to_camera * translation_mtm))
+        translation_world = self.camera_pose.M * translation_camera
+        translation_local = self.T_wire_world.M.Inverse() * translation_world
+        rotation_mtm = self.mtm_pose_at_clutch.M.Inverse() * self.mtm_pose.M
+        rotation_camera = mtm_base_to_camera * rotation_mtm * mtm_base_to_camera.Inverse()
+        rotation_world = self.camera_pose.M * rotation_camera * self.camera_pose.M.Inverse()
+        rotation_local = self.T_wire_world.M.Inverse() * rotation_world * self.T_wire_world.M
+        return np.array([
+            translation_local.x(),
+            translation_local.y(),
+            translation_local.z()
+        ]), rotation_local
+
+    def reset_bodies(self):
+        self.get_logger().info("Resetting all bodies before moving the wire")
+        self.reset_pub.publish(Empty())
+        time.sleep(0.5)  # give AMBF time to reset
+
     def run_test(self):
+
         # wait for wire pose
         while self.T_wire_world is None:
             rclpy.spin_once(self, timeout_sec=0.1)
@@ -200,7 +277,9 @@ class RingMoverNode(Node):
         initial_x /= np.linalg.norm(initial_x)
         prev_x_axis = initial_x
 
-        while rclpy.ok() and t >= 0.05:
+        while rclpy.ok() and 0.05 <= t <= 1.0:
+            rclpy.spin_once(self, timeout_sec=0.0)
+            traversal_direction = self.get_traversal_direction()
             centerline_pos = self.evaluate_bspline(t)
             tangent = -self.get_tangent(t)
 
@@ -242,12 +321,17 @@ class RingMoverNode(Node):
                     final_rot = base_rot * perturb_rot
                     print(f"t={t:.3f} | ROTATIONAL perturb: {np.degrees(tilt_angle):.1f} deg")
 
+            clutch_translation, clutch_rotation = self.get_clutch_perturbation()
+            final_pos = final_pos + clutch_translation
+            final_rot = final_rot * clutch_rotation
+
+            # Keep publishing while paused so the ring holds its pose.
             self.command_ring_pose(final_pos, final_rot)
             prev_x_axis = x_axis
 
-            t -= travel_speed * period
+            t += traversal_direction * travel_speed * period
+            t = min(max(t, 0.05), 1.0)
             time.sleep(period)
-            rclpy.spin_once(self, timeout_sec=0)
 
         self.get_logger().info("Test complete — ring reached right end of wire")
 
@@ -256,10 +340,18 @@ def main(args=None):
     parser = ArgumentParser()
     parser.add_argument('--perturb', action='store_true',
                         help='Enable translational and rotational perturbations')
+    parser.add_argument('--mtm-perturb', action='store_true',
+                        help='Enable clutch-controlled MTML pose perturbations')
+    parser.add_argument('--pedal-traverse', action='store_true',
+                        help='Use cam+ and cam- pedals instead of automatic traversal')
     parsed_args, remaining = parser.parse_known_args()
 
     rclpy.init(args=remaining)
-    node = RingMoverNode(enable_perturbations=parsed_args.perturb)
+    node = RingMoverNode(
+        enable_perturbations=parsed_args.perturb,
+        enable_mtm_perturbations=parsed_args.mtm_perturb,
+        pedal_traversal=parsed_args.pedal_traverse)
+    node.reset_bodies()  # reset before starting the test
     node.run_test()
     node.destroy_node()
     rclpy.shutdown()

@@ -10,20 +10,25 @@ from rclpy.node import Node
 from ambf_msgs.msg import RigidBodyState, RigidBodyCmd
 from scipy.optimize import minimize_scalar, minimize
 from geometry_msgs.msg import WrenchStamped, TwistStamped
+from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import Bool, Float32
 from sensor_msgs.msg import Joy
 from argparse import ArgumentParser
-
 # import centerline tools from mentor's repo
 sys.path.append(os.path.join(os.path.dirname(__file__), 'mesh_to_bezier_curve'))
 from find_mesh_centerline import extract_bspline_from_obj, basis_values
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from surgical_robotics_challenge.utils.utilities import pose_to_frame
 
 
 class WireTrackerNode(Node):
-    def __init__(self, simulation_mode=False):
+    MTM_TRANSLATION_SCALE = 0.2
+
+    def __init__(self, simulation_mode=False, enable_mtm_perturbations=False):
         super().__init__('wire_distance_tracker')
 
         self.simulation_mode = simulation_mode
+        self.enable_mtm_perturbations = enable_mtm_perturbations
         self.get_logger().info(f"Simulation mode: {self.simulation_mode}")
 
         # LOAD CENTERLINE FROM WIRE MESH OBJ
@@ -42,10 +47,18 @@ class WireTrackerNode(Node):
         self.coag_pressed = False
         self.prev_u_tangent = None
         self.last_ring_cmd_time = None
+        self.mover_timeout_reported = False
+        self.clutch_pressed = False
+        self.mtm_pose = None
+        self.mtm_pose_at_clutch = None
 
         # SUBSCRIBERS
         self.coag_sub = self.create_subscription(
             Joy, '/console1/operator_present', self.coag_callback, 1)
+        self.clutch_sub = self.create_subscription(
+            Joy, '/console1/clutch', self.clutch_callback, 1)
+        self.mtm_pose_sub = self.create_subscription(
+            PoseStamped, '/MTML/measured_cp', self.mtm_pose_callback, 1)
         self.wire_sub = self.create_subscription(
             RigidBodyState, '/ambf/env/phantom/wire_visual/State',
             self.wire_pose_callback, 1)
@@ -114,35 +127,32 @@ class WireTrackerNode(Node):
     def coag_callback(self, msg):
         self.coag_pressed = msg.buttons[0]
 
+    def clutch_callback(self, msg):
+        pressed = bool(msg.buttons[0])
+        if pressed and not self.clutch_pressed and self.enable_mtm_perturbations:
+            self.mtm_pose_at_clutch = self.mtm_pose
+        elif not pressed:
+            self.mtm_pose_at_clutch = None
+        self.clutch_pressed = pressed
+
+    def mtm_pose_callback(self, msg):
+        self.mtm_pose = pose_to_frame(msg.pose)
+        if (self.clutch_pressed and self.enable_mtm_perturbations and
+                self.mtm_pose_at_clutch is None):
+            self.mtm_pose_at_clutch = self.mtm_pose
+
     def ring_cmd_callback(self, msg):
         self.last_ring_cmd_time = time.time()
+        self.mover_timeout_reported = False
 
     def wire_pose_callback(self, msg_wire):
-        wire_pos = PyKDL.Vector(
-            msg_wire.pose.position.x,
-            msg_wire.pose.position.y,
-            msg_wire.pose.position.z)
-        wire_rot = PyKDL.Rotation.Quaternion(
-            msg_wire.pose.orientation.x,
-            msg_wire.pose.orientation.y,
-            msg_wire.pose.orientation.z,
-            msg_wire.pose.orientation.w)
-        self.latest_T_wire_world = PyKDL.Frame(wire_rot, wire_pos)
+        self.latest_T_wire_world = pose_to_frame(msg_wire.pose)
 
     def ring_pose_callback(self, msg_ring):
         self.latest_ring_msg = msg_ring
 
     def camera_pose_callback(self, msg_camera):
-        camera_pos = PyKDL.Vector(
-            msg_camera.pose.position.x,
-            msg_camera.pose.position.y,
-            msg_camera.pose.position.z)
-        camera_rot = PyKDL.Rotation.Quaternion(
-            msg_camera.pose.orientation.x,
-            msg_camera.pose.orientation.y,
-            msg_camera.pose.orientation.z,
-            msg_camera.pose.orientation.w)
-        self.latest_T_camera_world = PyKDL.Frame(camera_rot, camera_pos)
+        self.latest_T_camera_world = pose_to_frame(msg_camera.pose)
 
     def twist_callback_L(self, msg):
         self.latest_twist_L = msg
@@ -169,22 +179,30 @@ class WireTrackerNode(Node):
         tangent = p_forward - p_backward
         norm = np.linalg.norm(tangent)
         if norm < 1e-6:
+            print("Warning: B-spline tangent norm is near zero at t =", t)
             return np.array([1.0, 0.0, 0.0])  # fallback
         return tangent / norm
 
     # ---------------------- GEOMETRY ----------------------
 
     def get_ring_frame_in_wire(self, msg_ring):
-        ring_pos = PyKDL.Vector(
-            msg_ring.pose.position.x,
-            msg_ring.pose.position.y,
-            msg_ring.pose.position.z)
-        ring_rot = PyKDL.Rotation.Quaternion(
-            msg_ring.pose.orientation.x,
-            msg_ring.pose.orientation.y,
-            msg_ring.pose.orientation.z,
-            msg_ring.pose.orientation.w)
-        T_ring_world = PyKDL.Frame(ring_rot, ring_pos)
+        T_ring_world = pose_to_frame(msg_ring.pose)
+        if (self.enable_mtm_perturbations and self.clutch_pressed and
+            self.mtm_pose_at_clutch is not None and self.mtm_pose is not None and
+            self.latest_T_camera_world is not None):
+            mtm_base_to_camera = PyKDL.Rotation.RotX(-0.865)
+            translation_mtm = self.mtm_pose.p - self.mtm_pose_at_clutch.p
+            translation_camera = (self.MTM_TRANSLATION_SCALE *
+                                  (mtm_base_to_camera * translation_mtm))
+            translation_delta = self.latest_T_camera_world.M * translation_camera
+            rotation_mtm = self.mtm_pose_at_clutch.M.Inverse() * self.mtm_pose.M
+            rotation_camera = (mtm_base_to_camera * rotation_mtm *
+                               mtm_base_to_camera.Inverse())
+            rotation_delta = (self.latest_T_camera_world.M * rotation_camera *
+                              self.latest_T_camera_world.M.Inverse())
+            T_ring_world = PyKDL.Frame(
+                rotation_delta * T_ring_world.M,
+                T_ring_world.p + translation_delta)
         return self.latest_T_wire_world.Inverse() * T_ring_world
 
     def get_closest_wire_point(self, ring_com):
@@ -248,13 +266,15 @@ class WireTrackerNode(Node):
 
     def compute_rotational_error(self, closest_t, T_ring_wire):
         """Compute angular error between ring Z axis and wire tangent"""
-        u_tangent = self.get_bspline_tangent(closest_t)
+        # The mover drives the ring along decreasing B-spline t.
+        u_tangent = -self.get_bspline_tangent(closest_t)
         u_ring_z = np.array([T_ring_wire.M.UnitZ().x(),
                               T_ring_wire.M.UnitZ().y(),
                               T_ring_wire.M.UnitZ().z()])
-        dot_product = np.dot(u_tangent, u_ring_z)
-        clipped_dot = np.clip(dot_product, -1.0, 1.0)
-        angular_error_rad = np.arccos(clipped_dot)
+        dot_product = float(np.dot(u_tangent, u_ring_z))
+        # A ring axis has no meaningful forward/backward direction here.
+        dot_product = abs(np.clip(dot_product, -1.0, 1.0))
+        angular_error_rad = np.arccos(dot_product)
         angular_error_deg = np.degrees(angular_error_rad)
         return angular_error_deg, u_tangent, u_ring_z, dot_product
 
@@ -277,7 +297,9 @@ class WireTrackerNode(Node):
                         u_ring_z, dot_product, kp_rot, angular_deadband):
         if angular_error_deg < angular_deadband:
             return np.zeros(3)
-        u_ring_z_aligned = -u_ring_z if dot_product < 0 else u_ring_z
+        u_ring_z_aligned = u_ring_z
+        if np.dot(u_ring_z_aligned, filtered_tangent) < 0:
+            u_ring_z_aligned = -u_ring_z_aligned
         rotation_axis = np.cross(u_ring_z_aligned, filtered_tangent)
         norm_axis = np.linalg.norm(rotation_axis)
         if norm_axis < 1e-6:
@@ -301,15 +323,17 @@ class WireTrackerNode(Node):
     def transform_and_publish_wrench(self, max_force, max_torque,
                                       f_total_L, f_total_R,
                                       torque_total_L, torque_total_R):
-        # on dVRK — only publish when coag is pressed
+        # on dVRK — zero the wrench when coag is not pressed
         # in simulation mode — always publish for testing
         if not self.simulation_mode and not self.coag_pressed:
+            self.zero_wrench()
             return
 
         R_wire_to_camera = (self.latest_T_camera_world.M.Inverse() *
                             self.latest_T_wire_world.M)
         T_baseoffset = PyKDL.Frame(
-            PyKDL.Rotation.RPY((3.14 - 0.8) / 2, 0, 0),
+            # PyKDL.Rotation.RPY((3.14 - 0.8) / 2, 0, 0),
+            PyKDL.Rotation.RPY(0.865, 0, 0),
             PyKDL.Vector(0, 0, 0))
 
         def to_camera_frame(f_np):
@@ -339,14 +363,14 @@ class WireTrackerNode(Node):
 
     def control_loop(self):
         # PARAMETERS — tune these
-        max_force        = 2.0    # N
+        max_force        = 3.0    # N
         max_torque       = 0.5    # N·m
-        kp_pos           = 50    # N/m
+        kp_pos           = 1000    # N/m
         kd_pos           = 1.0    # N/(m/s)
-        kp_rot           = 0.01    # N·m/rad
+        kp_rot           = 0.05    # N·m/rad
         kd_rot           = 0.0    # N·m/(rad/s)
-        linear_deadband  = 0.001  # m
-        angular_deadband = 0.0    # deg
+        linear_deadband  = 0.0005  # m
+        angular_deadband = 2.0    # deg; ignore tracking noise near tangent alignment
         mover_timeout    = 0.5    # s — max silence from move_ring_along_wire.py before zeroing
 
         # SAFETY GUARD
@@ -360,7 +384,9 @@ class WireTrackerNode(Node):
         # MOVER HEARTBEAT — zero wrench if move_ring_along_wire.py has stopped publishing
         if (self.last_ring_cmd_time is not None and
                 time.time() - self.last_ring_cmd_time > mover_timeout):
-            print("Move ring command timeout — zeroing wrench")
+            if not self.mover_timeout_reported:
+                print("Move ring command timeout - zeroing wrench", flush=True)
+                self.mover_timeout_reported = True
             self.zero_wrench()
             return
 
@@ -409,7 +435,7 @@ class WireTrackerNode(Node):
         # ROTATIONAL TORQUE
         angular_error_deg, u_tangent, u_ring_z, dot_product = \
             self.compute_rotational_error(closest_t, T_ring_wire)
-        filtered_tangent = self.limit_tangent_rate(u_tangent)
+        filtered_tangent = u_tangent
         torque_angular = self.compute_torque(
             angular_error_deg, filtered_tangent, u_ring_z,
             dot_product, kp_rot, angular_deadband)
@@ -460,10 +486,15 @@ def main(args=None):
     parser.add_argument(
         '--sim', action='store_true',
         help='Simulation mode — bypasses dVRK requirements for laptop testing')
+    parser.add_argument(
+        '--mtm-perturb', action='store_true',
+        help='Enable clutch-controlled MTML pose perturbations')
     parsed_args, remaining = parser.parse_known_args()
 
     rclpy.init(args=remaining)
-    tracker = WireTrackerNode(simulation_mode=parsed_args.sim)
+    tracker = WireTrackerNode(
+        simulation_mode=parsed_args.sim,
+        enable_mtm_perturbations=parsed_args.mtm_perturb)
     try:
         rclpy.spin(tracker)
     except KeyboardInterrupt:
