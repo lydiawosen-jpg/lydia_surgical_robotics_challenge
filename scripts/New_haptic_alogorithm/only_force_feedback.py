@@ -195,7 +195,7 @@ class WireTrackerNode(Node):
             translation_camera = (self.MTM_TRANSLATION_SCALE *
                                   (mtm_base_to_camera * translation_mtm))
             translation_delta = self.latest_T_camera_world.M * translation_camera
-            rotation_mtm = self.mtm_pose_at_clutch.M.Inverse() * self.mtm_pose.M
+            rotation_mtm = self.mtm_pose.M * self.mtm_pose_at_clutch.M.Inverse()
             rotation_camera = (mtm_base_to_camera * rotation_mtm *
                                mtm_base_to_camera.Inverse())
             rotation_delta = (self.latest_T_camera_world.M * rotation_camera *

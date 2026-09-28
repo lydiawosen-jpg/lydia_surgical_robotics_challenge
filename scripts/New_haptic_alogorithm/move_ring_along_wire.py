@@ -198,7 +198,7 @@ class RingMoverNode(Node):
                       (mtm_base_to_camera * translation_mtm))
         translation_world = self.camera_pose.M * translation_camera
         translation_local = self.T_wire_world.M.Inverse() * translation_world
-        rotation_mtm = self.mtm_pose_at_clutch.M.Inverse() * self.mtm_pose.M
+        rotation_mtm = self.mtm_pose.M * self.mtm_pose_at_clutch.M.Inverse()
         rotation_camera = mtm_base_to_camera * rotation_mtm * mtm_base_to_camera.Inverse()
         rotation_world = self.camera_pose.M * rotation_camera * self.camera_pose.M.Inverse()
         rotation_local = self.T_wire_world.M.Inverse() * rotation_world * self.T_wire_world.M
@@ -323,7 +323,7 @@ class RingMoverNode(Node):
 
             clutch_translation, clutch_rotation = self.get_clutch_perturbation()
             final_pos = final_pos + clutch_translation
-            final_rot = final_rot * clutch_rotation
+            final_rot = clutch_rotation * final_rot
 
             # Keep publishing while paused so the ring holds its pose.
             self.command_ring_pose(final_pos, final_rot)
