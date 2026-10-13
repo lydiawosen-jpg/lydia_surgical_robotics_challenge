@@ -29,9 +29,9 @@
                 "alpha":  1.5708, "A":  0.0000, "theta":  0.0000, "D":  0.0000,
                 "type": "prismatic",
                 "mode": "active",
-                "offset": -0.4318,
+                "offset": -4.318,
                 "qmin": 0.0,
-                "qmax": 0.24,  // 240 mm
+                "qmax": 2.4,  // 2400 mm (scaled 10x)
                 "ftmax": 9.877926
             }
         ]

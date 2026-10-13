@@ -17,9 +17,12 @@ from find_mesh_centerline import extract_bspline_from_obj, basis_values
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from surgical_robotics_challenge.utils.utilities import frame_to_pose, pose_to_frame
 
+# Scene geometry (ADF meshes, positions) is scaled by this factor relative to real metres.
+SCENE_SCALE = 10.0
+
 
 class RingMoverNode(Node):
-    MTM_TRANSLATION_SCALE = 0.2
+    MTM_TRANSLATION_SCALE = 0.2 * SCENE_SCALE
 
     def __init__(self, enable_perturbations=False,
                  enable_mtm_perturbations=False, pedal_traversal=False):
@@ -43,6 +46,7 @@ class RingMoverNode(Node):
         self.control_points, self.knots, self.degree = extract_bspline_from_obj(
             mesh_path, num_slices=100
         )
+        self.control_points = np.asarray(self.control_points, dtype=float)
         self.get_logger().info(f"Loaded centerline with {len(self.control_points)} control points")
 
         # Publisher to command ring pose
@@ -242,7 +246,7 @@ class RingMoverNode(Node):
         ])
         start_t, start_dist = self.find_closest_t(ring_world)
         print(f"\nRing current position in world: ({ring_world[0]:.4f}, {ring_world[1]:.4f}, {ring_world[2]:.4f})")
-        print(f"Closest t on centerline: {start_t:.3f} (distance: {start_dist*1000:.1f}mm)")
+        print(f"Closest t on centerline: {start_t:.3f} (distance: {start_dist / SCENE_SCALE * 1000:.1f}mm)")
 
         self.get_logger().info(f"Starting movement from t={start_t:.3f} toward t=0.05")
 
@@ -254,7 +258,7 @@ class RingMoverNode(Node):
         # translational perturbation — before first peak (flat section near left base)
         trans_perturb_t_start = start_t       # start of flat section
         trans_perturb_t_end   = 0.85          # end before peak begins
-        trans_perturb_amplitude = 0.005        # 5mm sideways
+        trans_perturb_amplitude = 0.005 * SCENE_SCALE  # 5mm sideways (real)
 
         # rotational perturbation — between first peak and first trough
         rot_perturb_t_start = 0.75            # just after first peak
@@ -311,7 +315,7 @@ class RingMoverNode(Node):
                     perturb_pos = trans_perturb_amplitude * np.sin(2 * np.pi * 1.0 * phase) * x_axis
                     # 2.0 * phase means 2 full sine cycles in this window = 2 side-to-side oscillations
                     final_pos = centerline_pos + perturb_pos
-                    print(f"t={t:.3f} | TRANSLATIONAL perturb: ({perturb_pos[0]*1000:.1f}, {perturb_pos[1]*1000:.1f}, {perturb_pos[2]*1000:.1f})mm")
+                    print(f"t={t:.3f} | TRANSLATIONAL perturb: ({perturb_pos[0]/SCENE_SCALE*1000:.1f}, {perturb_pos[1]/SCENE_SCALE*1000:.1f}, {perturb_pos[2]/SCENE_SCALE*1000:.1f})mm")
 
                 # ROTATIONAL PERTURBATION — short window between first peak and first trough
                 elif 0.55 < t <= 0.60:   # short window — tune these values

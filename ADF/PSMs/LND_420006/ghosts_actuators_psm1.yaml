@@ -8,14 +8,14 @@ ignore inter-collision: true
 namespace: /ambf/env/ghosts/psm1/
 
 collision geometry: &box_geometry
-    x: 0.000315
-    y: 0.00517
-    z: 0.00158
+    x: 0.00315
+    y: 0.0517
+    z: 0.0158
 
 shape geometry: &shape_geometry
-    x: 0.000315
-    y: 0.00517
-    z: 0.00158
+    x: 0.00315
+    y: 0.0517
+    z: 0.0158
 
 GHOST right finger:
   name: right_finger_ghost
@@ -24,12 +24,12 @@ GHOST right finger:
   shape: BOX
   geometry: *shape_geometry
   # collision mesh type: CONVEX_HULL
-  collision margin: 0.0001
+  collision margin: 0.001
   scale: 1.0
   location:
     position:
       x: 0.0
-      y: 0.006855
+      y: 0.06855
       z: 0.0
     orientation:
       r: 0.0
@@ -59,12 +59,12 @@ GHOST left finger:
   shape: BOX
   geometry: *shape_geometry
   # collision mesh type: CONVEX_HULL
-  collision margin: 0.0001
+  collision margin: 0.001
   scale: 1.0
   location:
     position:
       x: 0.0
-      y: 0.006855
+      y: 0.06855
       z: 0.0
     orientation:
       r: 0.0
@@ -92,7 +92,7 @@ ACTUATOR Actuator0:
   type: Constraint
   location:
     orientation: {p: 0.0, r: 0.0, y: 0.0}
-    position: {x: 0.0, y: -0.010, z: 0.0}
+    position: {x: 0.0, y: -0.1, z: 0.0}
   parent: /ambf/env/psm1/BODY tool yaw link
   visible: False
-  visible size: 0.0005
+  visible size: 0.005

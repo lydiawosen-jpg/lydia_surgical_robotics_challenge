@@ -20,9 +20,12 @@ from find_mesh_centerline import extract_bspline_from_obj, basis_values
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from surgical_robotics_challenge.utils.utilities import pose_to_frame
 
+# Scene geometry (ADF meshes, positions) is scaled by this factor relative to real metres.
+SCENE_SCALE = 10.0
+
 
 class WireTrackerNode(Node):
-    MTM_TRANSLATION_SCALE = 0.2
+    MTM_TRANSLATION_SCALE = 0.2 * SCENE_SCALE
 
     def __init__(self, simulation_mode=False, enable_mtm_perturbations=False):
         super().__init__('wire_distance_tracker')
@@ -35,6 +38,7 @@ class WireTrackerNode(Node):
         mesh_path = os.path.join(os.path.dirname(__file__), 'mesh_to_bezier_curve', 'mesh', 'wire_visual.OBJ')
         self.control_points, self.knots, self.degree = extract_bspline_from_obj(
             mesh_path, num_slices=100)
+        # self.control_points = np.asarray(self.control_points, dtype=float) * SCENE_SCALE
         self.get_logger().info(
             f"Loaded B-spline centerline with {len(self.control_points)} control points")
 
@@ -249,7 +253,7 @@ class WireTrackerNode(Node):
             u_vector_ring_to_wire = (vector_ring_to_wire /
                                       np.linalg.norm(vector_ring_to_wire))
             effective_error = min_distance - linear_deadband
-            f_linear = kp_pos * effective_error * u_vector_ring_to_wire
+            f_linear = (kp_pos / SCENE_SCALE) * effective_error * u_vector_ring_to_wire
         return f_linear, u_vector_ring_to_wire
 
     def compute_linear_damping_L(self, kd_pos, u_vector_ring_to_wire):
@@ -357,7 +361,7 @@ class WireTrackerNode(Node):
 
         # always publish to both arms — user just holds MTM handles
         self.wrench_pub_L.publish(build_wrench(f_L_cam, t_L_cam))
-        self.wrench_pub_R.publish(build_wrench(f_R_cam, t_R_cam))
+        # self.wrench_pub_R.publish(build_wrench(f_R_cam, t_R_cam))
 
     # ---------------------- CONTROL LOOP ----------------------
 
@@ -365,11 +369,11 @@ class WireTrackerNode(Node):
         # PARAMETERS — tune these
         max_force        = 3.0    # N
         max_torque       = 0.5    # N·m
-        kp_pos           = 1000    # N/m
+        kp_pos           = 200    # N/m
         kd_pos           = 1.0    # N/(m/s)
         kp_rot           = 0.05    # N·m/rad
         kd_rot           = 0.0    # N·m/(rad/s)
-        linear_deadband  = 0.0005  # m
+        linear_deadband  = 0.0005 * SCENE_SCALE  # sim units (0.5 mm real)
         angular_deadband = 2.0    # deg; ignore tracking noise near tangent alignment
         mover_timeout    = 0.5    # s — max silence from move_ring_along_wire.py before zeroing
 
@@ -402,7 +406,7 @@ class WireTrackerNode(Node):
             self.get_closest_wire_point(ring_com)
 
         # RING CAME OFF SAFETY CHECK
-        if min_distance > 0.015:
+        if min_distance > 0.015 * SCENE_SCALE:
             zero = np.zeros(3)
             self.transform_and_publish_wrench(
                 max_force, max_torque, zero, zero, zero, zero)
@@ -478,7 +482,7 @@ class WireTrackerNode(Node):
         """Publish zero force/torque to both MTMs, bypassing coag gating"""
         zero_msg = WrenchStamped()
         self.wrench_pub_L.publish(zero_msg)
-        self.wrench_pub_R.publish(WrenchStamped())
+        # self.wrench_pub_R.publish(WrenchStamped())
 
 
 def main(args=None):

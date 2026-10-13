@@ -6,7 +6,7 @@
         "joints": [
             {
                 "name": "outer_roll",
-                "alpha":  0.0000, "A":  0.0000, "theta":  0.0000, "D":  0.4826,
+                "alpha":  0.0000, "A":  0.0000, "theta":  0.0000, "D":  4.826,
                 "type": "revolute",
                 "mode": "active",
                 "offset":  0.0000,
@@ -26,7 +26,7 @@
             },
             {
                 "name": "outer_wrist_yaw",
-                "alpha": -1.5708, "A":  0.009, "theta":  0.0000, "D":  0.0000,
+                "alpha": -1.5708, "A":  0.09, "theta":  0.0000, "D":  0.0000,
                 "type": "revolute",
                 "mode": "active",
                 "offset": -1.5708,

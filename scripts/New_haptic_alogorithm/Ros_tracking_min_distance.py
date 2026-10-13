@@ -16,6 +16,9 @@ from sensor_msgs.msg import Joy
 from datetime import datetime
 import socket
 
+# Scene geometry (ADF meshes, positions) is scaled by this factor relative to real metres.
+SCENE_SCALE = 10.0
+
 
 def get_bezier_point(t, P0, P1, P2, P3):
     return (1-t)**3 * P0 + 3*(1-t)**2 * t * P1 + 3*(1-t) * t**2 * P2 + t**3 * P3
@@ -33,7 +36,7 @@ class WireTrackerNode(Node):
         # Using the absolute path so it runs from any workspace folder safely
         json_path = os.path.join(os.path.dirname(__file__), "my_bezier_curve.json")
         with open(json_path, 'r') as f:
-            self.my_total_curve = json.load(f)
+            self.my_total_curve = (np.array(json.load(f)) * SCENE_SCALE).tolist()
         
         self.get_logger().info("Waiting for static wire pose from AMBF...")
 
@@ -405,7 +408,7 @@ class WireTrackerNode(Node):
             u_vector_ring_to_wire = vector_ring_to_wire / np.linalg.norm(vector_ring_to_wire)
             
             effective_linear_error = linear_error - linear_deadband
-            f_linear = kp_pos * effective_linear_error * u_vector_ring_to_wire # keeping u_vector positive causes convergent force
+            f_linear = (kp_pos / SCENE_SCALE) * effective_linear_error * u_vector_ring_to_wire # keeping u_vector positive causes convergent force
         return f_linear, u_vector_ring_to_wire  # f_linear is a numpy array realtive to wire
     
     def compute_linear_damping_L(self, kd_pos,u_vector_ring_to_wire): 
@@ -621,7 +624,7 @@ class WireTrackerNode(Node):
         return False 
 
     def ring_came_off(self, min_distance):
-        if min_distance > 0.015:
+        if min_distance > 0.015 * SCENE_SCALE:
             return True
         return False
     
@@ -678,7 +681,7 @@ class WireTrackerNode(Node):
             
 
     def ring_came_off(self, min_distance):
-        if min_distance > 0.015:
+        if min_distance > 0.015 * SCENE_SCALE:
             return True
         return False
 
@@ -691,7 +694,7 @@ class WireTrackerNode(Node):
         kd_pos = 0#3  # Damping constant for velocity (N/(m/s))
         kp_rot = 0.1 #0.1  # Spring constant for rotation (N·m/rad)
         kd_rot = 0.0  # Damping constant for angular velocity (N·m/(rad/s))
-        linear_deadband = 0.0001 # meters, distance from wire centerline where no force is applied
+        linear_deadband = 0.0001 * SCENE_SCALE # sim units, distance from wire centerline where no force is applied
         angular_deadband = 0  # degrees, angle from wire tangent where no force is applied
         
         # EARLT SAFETT CHECK

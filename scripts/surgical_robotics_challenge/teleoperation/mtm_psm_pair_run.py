@@ -52,6 +52,7 @@ from surgical_robotics_challenge.teleoperation.input_devices.mtm_device_crtk imp
 from surgical_robotics_challenge.ecm_arm import ECM
 from surgical_robotics_challenge.utils.jnt_control_gui import JointGUI
 from surgical_robotics_challenge.utils.utilities import get_boolean_from_opt
+from surgical_robotics_challenge.utils import coordinate_frames
 from surgical_robotics_challenge.teleoperation.mtm_teleop_common import apply_mtm_to_psm_command, load_selected_psm_arms
 from threading import Thread
 from std_msgs.msg import Float64MultiArray
@@ -211,6 +212,8 @@ if __name__ == "__main__":
         print('Exiting')
 
     else:
+        coordinate_frames.TeleopScale.scale_factor = 10.0
+
         leader_l = MTM(simulation_manager.get_ral(), '/MTML/')
         leader_r = MTM(simulation_manager.get_ral(), '/MTMR/')
         leader_l.set_base_frame(Frame(Rotation.RPY((3.14 - 0.8) / 2, 0, 0), Vector(0, 0, 0)))

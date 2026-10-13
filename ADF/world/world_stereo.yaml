@@ -1,4 +1,4 @@
-enclosure size: { length: 10.0, width: 10.0, height: 3.0 }
+enclosure size: { length: 100.0, width: 100.0, height: 30.0 }
 lights: [light2]
 cameras: [cameraL, cameraR]
 environment: "./checkered_floor.yaml"
@@ -13,7 +13,7 @@ shaders:
 light1:
   namespace: lights/
   name: light1
-  location: { x: 0.0, y: 0.5, z: 2.5 }
+  location: { x: 0.0, y: 5.0, z: 25.0 }
   direction: { x: 0, y: 0, z: -1.0 }
   spot exponent: 0.3
   shadow quality: 0
@@ -22,7 +22,7 @@ light1:
 light2:
   namespace: lights/
   name: light2
-  location: { x: 0.01, y: 0.01, z: 0.0 }
+  location: { x: 0.1, y: 0.1, z: 0.0 }
   direction: { x: 0, y: 0.0, z: -1.0 }
   attenuation: {constant: 0.8, linear: 0.8, quadratic: 0.0}
   spot exponent: 1.2 #Not used in the SRC
@@ -33,7 +33,7 @@ light2:
 light3:
   namespace: lights/
   name: light3
-  location: { x: 0.00, y: 0.0, z: 5.5 }
+  location: { x: 0.0, y: 0.0, z: 55.0 }
   direction: { x: 0, y: 0, z: -1.0 }
   spot exponent: 0.3 #Not used in the SRC
   shadow quality: 0
@@ -44,8 +44,8 @@ light3:
 # CAMERA COMMON CONFIG
 cam common configs:
   clipping plane: &cam_common_clipping_plane
-    near: 0.001
-    far: 10.0
+    near: 0.01
+    far: 100.0
   field of view: &cam_common_fov 0.9599310886 # 55 degrees in radians 
   publish image resolution: &cam_common_pub_img_res { width: 640, height: 480 } 
   publish depth resolution: &cam_common_pub_depth_res { width: 640, height: 480 }
@@ -54,20 +54,21 @@ cam common configs:
 cameraL:
   namespace: stereo/
   name: left
-  location: { x: -0.001, y: 0.0, z: -0.05 }
+  location: { x: -0.01, y: 0.0, z: -0.5 }
   look at: { x: 0.0, y: 0.0, z: -1.0 }
   up: { x: 0.0, y: 1.0, z: 0.0 }
   clipping plane: *cam_common_clipping_plane
   field view angle: *cam_common_fov 
-  monitor: 1
+  monitor: 2
   parent: BODY CameraFrame
   publish image: True
   publish image interval: 5
   publish image resolution: *cam_common_pub_img_res 
   # publish depth: True
   publish depth resolution: *cam_common_pub_depth_res
-  multipass: True # Set to True to enable shadows
-  mouse control multipliers: { pan: 0.1, rotate: 1.0, scroll: 0.1, arcball: 0.1 }
+  # multipass: True # Set to True to enable shadows
+  mouse control multipliers: { pan: 1.0, rotate: 1.0, scroll: 1.0, arcball: 0.1 }
+  window resolution: { width: 1280, height: 1024}
 
 cameraL2:
   namespace: cameras/
@@ -95,12 +96,12 @@ cameraL2:
 cameraR:
   namespace: stereo/
   name: right
-  location: { x: 0.001, y: 0.0, z: -0.05 }
+  location: { x: 0.01, y: 0.0, z: -0.5 }
   look at: { x: 0.0, y: 0.0, z: -1.0 }
   up: { x: 0.0, y: 1.0, z: 0.0 }
   clipping plane: *cam_common_clipping_plane
   field view angle: *cam_common_fov 
-  monitor: 2
+  monitor: 3
   parent: BODY CameraFrame
   publish image: True
   publish image interval: 5
@@ -108,16 +109,17 @@ cameraR:
   # publish depth: True
   publish depth resolution: *cam_common_pub_depth_res
   visible: True
-  mouse control multipliers: { pan: 0.1, rotate: 1.0, scroll: 0.1, arcball: 0.1 }
-  multipass: True
+  mouse control multipliers: { pan: 1.0, rotate: 1.0, scroll: 1.0, arcball: 0.1 }
+  # multipass: True
+  window resolution: { width: 1280, height: 1024}
 
 camera3:
   namespace: cameras/
   name: normal_camera
-  location: { x: -3.0, y: 0.0, z: 2.0 }
-  look at: { x: 0.0, y: 0.0, z: -0.5 }
+  location: { x: -30.0, y: 0.0, z: 20.0 }
+  look at: { x: 0.0, y: 0.0, z: -5.0 }
   up: { x: 0.0, y: 0.0, z: 1.0 }
-  clipping plane: { near: 0.01, far: 10.0 }
+  clipping plane: { near: 0.1, far: 100.0 }
   field view angle: 0.8
   monitor: 2
   # parent: /ambf/env/BODY Occulus
