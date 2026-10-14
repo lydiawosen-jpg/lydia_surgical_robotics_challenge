@@ -40,7 +40,7 @@ def export_blender_curve_to_json():
         
         my_total_curve.append(segment)
 
-    output_path = os.path.expanduser("~/my_bezier_curve.json")
+    output_path = os.path.join(os.path.dirname(__file__), "my_bezier_curve.json")
 
     with open(output_path, 'w') as f:
         json.dump(my_total_curve, f, indent=4)

@@ -21,8 +21,8 @@ def distance_objective(t, ring_com, P0, P1, P2, P3):
     return distance
 
 
-# look in homedirectory to fine file, read the file and load it back into a standard Python list
-json_path = os.path.expanduser("~/my_bezier_curve.json")
+# Load the curve data stored beside this script.
+json_path = os.path.join(os.path.dirname(__file__), "my_bezier_curve.json")
 
 with open(json_path, 'r') as f:
     my_total_curve = (np.array(json.load(f)) * SCENE_SCALE).tolist()

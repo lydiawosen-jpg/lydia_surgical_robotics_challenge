@@ -17,7 +17,7 @@ from argparse import ArgumentParser
 # import centerline tools from mentor's repo
 sys.path.append(os.path.join(os.path.dirname(__file__), 'mesh_to_bezier_curve'))
 from find_mesh_centerline import extract_bspline_from_obj, basis_values
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 from surgical_robotics_challenge.utils.utilities import pose_to_frame
 
 # Scene geometry (ADF meshes, positions) is scaled by this factor relative to real metres.
