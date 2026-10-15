@@ -34,7 +34,7 @@ BODY base:
     ix: 0.0
     iy: 0.0
     iz: 0.0
-  collision margin: 0.01
+  collision margin: 0.02
   scale: 1.0
   location:
     position:
@@ -95,8 +95,8 @@ camera:
     y: -0.19273
     z: 0.98123
   clipping plane:
-    far: 10000.0
-    near: 1.000000015
+    far: 100.0
+    near: 0.1
   field view angle: 0.6911112070083618
   monitor: 0
   publish image: false
@@ -153,13 +153,13 @@ BODY checkpoint1:
     ix: 0.0
     iy: 0.0
     iz: 0.0
-  collision margin: 0.01
+  collision margin: 0.02
   scale: 1.0
   location:
     position:
-      x: 0.5733
-      y: 1.7484
-      z: 7.5422
+      x: 0.8784
+      y: 1.7278
+      z: 7.9105
     orientation:
       r: 0.0
       p: -0.0
@@ -208,13 +208,13 @@ BODY checkpoint2:
     ix: 0.0
     iy: 0.0
     iz: 0.0
-  collision margin: 0.01
+  collision margin: 0.02
   scale: 1.0
   location:
     position:
-      x: 0.4415
-      y: 1.8372
-      z: 7.2962
+      x: 0.6148
+      y: 1.9054
+      z: 7.4185
     orientation:
       r: 0.0
       p: -0.0
@@ -263,13 +263,13 @@ BODY checkpoint3:
     ix: 0.0
     iy: 0.0
     iz: 0.0
-  collision margin: 0.01
+  collision margin: 0.02
   scale: 1.0
   location:
     position:
-      x: 0.3216
-      y: 1.7468
-      z: 7.5368
+      x: 0.375
+      y: 1.7246
+      z: 7.8997
     orientation:
       r: 0.0
       p: -0.0
@@ -318,13 +318,13 @@ BODY checkpoint4:
     ix: 0.0
     iy: 0.0
     iz: 0.0
-  collision margin: 0.01
+  collision margin: 0.02
   scale: 1.0
   location:
     position:
-      x: 0.1885
-      y: 1.6612
-      z: 7.2975
+      x: 0.1088
+      y: 1.5534
+      z: 7.4211
     orientation:
       r: 0.0
       p: -0.0
@@ -373,13 +373,13 @@ BODY checkpoint5:
     ix: 0.0
     iy: 0.0
     iz: 0.0
-  collision margin: 0.01
+  collision margin: 0.02
   scale: 1.0
   location:
     position:
-      x: 0.0421
-      y: 1.7484
-      z: 7.5361
+      x: -0.184
+      y: 1.7278
+      z: 7.8983
     orientation:
       r: 0.0
       p: -0.0
@@ -427,13 +427,13 @@ BODY end_trigger:
     ix: 0.0
     iy: 0.0
     iz: 0.0
-  collision margin: 0.01
+  collision margin: 0.02
   scale: 1.0
   location:
     position:
-      x: -0.0247
-      y: 1.7442
-      z: 7.2769
+      x: -0.3176
+      y: 1.7194
+      z: 7.3799
     orientation:
       r: 0.0
       p: -0.0
@@ -462,9 +462,9 @@ BODY end_trigger:
   collision groups: []
   collision shape: BOX
   collision geometry:
-    x: 0.12
-    y: 0.12
-    z: 0.013
+    x: 0.24
+    y: 0.24
+    z: 0.026
   collision offset:
     position:
       x: 0.0
@@ -492,14 +492,14 @@ BODY ring_visual:
   mesh: ring_visual.OBJ
   collision mesh: ring_single_convex_mesh.OBJ
   collision mesh type: CONVEX_HULL
-  mass: 1.0
-  collision margin: 0.001
+  mass: 0.1
+  collision margin: 0.002
   scale: 1.0
   location:
     position:
-      x: 0.6538
-      y: 1.749
-      z: 7.213
+      x: 1.0394
+      y: 1.729
+      z: 7.2521
     orientation:
       r: 0.0
       p: -0.0
@@ -519,10 +519,10 @@ BODY ring_visual:
   publish joint positions: false
   friction:
     rolling: 0.0
-    static: 0.5
-  restitution: 0.1
+    static: 0.1
+  restitution: 0.01
   damping:
-    angular: 0.1
+    angular: 0.05
     linear: 0.04
   visible: true
   collision groups: []
@@ -553,8 +553,8 @@ SENSOR ring_contact_sensor:
       y: 0.0
       z: 0.0
   visible: true
-  visible size: 0.04999999888
-  distance threshold: 0.01000000047
+  visible size: 0.1
+  distance threshold: 0.02
   process contact details: false
 BODY start_trigger:
   name: start_trigger
@@ -564,13 +564,13 @@ BODY start_trigger:
     ix: 0.0
     iy: 0.0
     iz: 0.0
-  collision margin: 0.01
+  collision margin: 0.02
   scale: 1.0
   location:
     position:
-      x: 0.6539
-      y: 1.748
-      z: 7.2769
+      x: 1.0396
+      y: 1.727
+      z: 7.3799
     orientation:
       r: 0.0
       p: -0.0
@@ -599,9 +599,9 @@ BODY start_trigger:
   collision groups: []
   collision shape: BOX
   collision geometry:
-    x: 0.12
-    y: 0.12
-    z: 0.013
+    x: 0.24
+    y: 0.24
+    z: 0.026
   collision offset:
     position:
       x: 0.0
@@ -634,13 +634,13 @@ BODY wire_visual:
     ix: 0.0
     iy: 0.0
     iz: 0.0
-  collision margin: 0.001
+  collision margin: 0.002
   scale: 1.0
   location:
     position:
-      x: 0.6542
-      y: 1.7501
-      z: 7.1973
+      x: 1.0402
+      y: 1.7312
+      z: 7.2207
     orientation:
       r: 0.0
       p: -0.0
@@ -660,10 +660,10 @@ BODY wire_visual:
   publish joint positions: false
   friction:
     rolling: 0.0
-    static: 0.5
-  restitution: 0.1
+    static: 0.1
+  restitution: 0.01
   damping:
-    angular: 0.1
+    angular: 0.05
     linear: 0.04
   visible: true
   collision groups: []
@@ -694,6 +694,6 @@ SENSOR wire_contact_sensor:
       y: 0.0
       z: 0.0
   visible: true
-  visible size: 0.04999999888
+  visible size: 0.1
   distance threshold: 0.0
   process contact details: false

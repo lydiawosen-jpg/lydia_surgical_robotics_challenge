@@ -3,9 +3,6 @@ from scipy.optimize import minimize_scalar, OptimizeResult
 import json
 import os
 
-# Scene geometry (ADF meshes, positions) is scaled by this factor relative to real metres.
-SCENE_SCALE = 10.0
-
 
 # Uses bezier equation and predfined P values to know coordinates of that t value
 def get_bezier_point(t, P0, P1, P2, P3):
@@ -21,13 +18,13 @@ def distance_objective(t, ring_com, P0, P1, P2, P3):
     return distance
 
 
-# Load the curve data stored beside this script.
-json_path = os.path.join(os.path.dirname(__file__), "my_bezier_curve.json")
+# look in homedirectory to fine file, read the file and load it back into a standard Python list
+json_path = os.path.expanduser("~/my_bezier_curve.json")
 
 with open(json_path, 'r') as f:
-    my_total_curve = (np.array(json.load(f)) * SCENE_SCALE).tolist()
+    my_total_curve = json.load(f)
 
-ring_com = np.array([0.077795, 0.165143, 0.710670]) * SCENE_SCALE
+ring_com = np.array([0.077795, 0.165143, 0.710670])
 
 # Initialize with an infinitely large distance
 final_result = OptimizeResult(fun=float('inf'))
@@ -55,7 +52,7 @@ min_distance = final_result.fun
 
 print(f"The closest parameter is t = {closest_t:.6f}")
 print(f"The exact 3D coordinates on the wire are: {closest_wire_point}")
-print(f"The absolute shortest distance to the ring is: {min_distance / SCENE_SCALE} meters")
+print(f"The absolute shortest distance to the ring is: {min_distance} meters")
 
 
 
