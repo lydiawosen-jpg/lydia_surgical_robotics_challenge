@@ -25,6 +25,12 @@ high resolution path: high_res/
 low resolution path: low_res/
 ignore inter-collision: false
 namespace: /ambf/env/phantom/
+
+# Set the visibility of the ghost objects. If true, the ghost objects will be visible in the simulation. If false, they will be invisible.
+visible: &ghosts_visible false
+collision groups: &base_collision_groups [11, 12]
+collision groups: &collision_groups [12]
+
 BODY base:
   name: base
   mesh: base.OBJ
@@ -66,7 +72,7 @@ BODY base:
     angular: 0.1
     linear: 0.04
   visible: true
-  collision groups: []
+  collision groups: *base_collision_groups
   use material: false
   color components:
     ambient:
@@ -99,6 +105,9 @@ camera:
     near: 0.1
   field view angle: 0.6911112070083618
   monitor: 0
+  window resolution:
+    height: 480
+    width: 640
   publish image: false
   publish image interval: 1
   publish image resolution:
@@ -141,6 +150,7 @@ BODY CameraFrame:
       y: 0
   passive: false
   color: random
+  collision groups: *collision_groups
   publish children names: false
   publish joint names: false
   publish joint positions: false
@@ -184,8 +194,8 @@ BODY checkpoint1:
   damping:
     angular: 0.1
     linear: 0.04
-  visible: false
-  collision groups: []
+  visible: *ghosts_visible
+  collision groups: *collision_groups
   use material: false
   color components:
     ambient:
@@ -239,8 +249,8 @@ BODY checkpoint2:
   damping:
     angular: 0.1
     linear: 0.04
-  visible: false
-  collision groups: []
+  visible: *ghosts_visible
+  collision groups: *collision_groups
   use material: false
   color components:
     ambient:
@@ -294,8 +304,8 @@ BODY checkpoint3:
   damping:
     angular: 0.1
     linear: 0.04
-  visible: false
-  collision groups: []
+  visible: *ghosts_visible
+  collision groups: *collision_groups
   use material: false
   color components:
     ambient:
@@ -349,8 +359,8 @@ BODY checkpoint4:
   damping:
     angular: 0.1
     linear: 0.04
-  visible: false
-  collision groups: []
+  visible: *ghosts_visible
+  collision groups: *collision_groups
   use material: false
   color components:
     ambient:
@@ -404,8 +414,8 @@ BODY checkpoint5:
   damping:
     angular: 0.1
     linear: 0.04
-  visible: false
-  collision groups: []
+  visible: *ghosts_visible
+  collision groups: *collision_groups
   use material: false
   color components:
     ambient:
@@ -459,7 +469,7 @@ BODY end_trigger:
     angular: 0.1
     linear: 0.04
   visible: true
-  collision groups: []
+  collision groups: *collision_groups
   collision shape: BOX
   collision geometry:
     x: 0.24
@@ -493,7 +503,7 @@ BODY ring_visual:
   collision mesh: ring_single_convex_mesh.OBJ
   collision mesh type: CONVEX_HULL
   mass: 0.1
-  collision margin: 0.002
+  collision margin: 0.001
   scale: 1.0
   location:
     position:
@@ -519,13 +529,13 @@ BODY ring_visual:
   publish joint positions: false
   friction:
     rolling: 0.0
-    static: 0.1
+    static: 0.0
   restitution: 0.01
   damping:
-    angular: 0.05
+    angular: 0.01
     linear: 0.04
   visible: true
-  collision groups: []
+  collision groups: *collision_groups
   use material: false
   color components:
     ambient:
@@ -595,8 +605,8 @@ BODY start_trigger:
   damping:
     angular: 0.1
     linear: 0.04
-  visible: true
-  collision groups: []
+  visible: *ghosts_visible
+  collision groups: *collision_groups
   collision shape: BOX
   collision geometry:
     x: 0.24
@@ -627,8 +637,9 @@ BODY start_trigger:
 BODY wire_visual:
   name: wire_visual
   mesh: wire_visual.OBJ
-  collision mesh: wire_collision_allchunks.OBJ
-  collision mesh type: CONVEX_HULL
+  # collision mesh: wire_collision_allchunks.OBJ
+  collision mesh: ../high_res/wire_visual.OBJ
+  collision mesh type: CONCAVE_MESH
   mass: 0.0
   inertia:
     ix: 0.0
@@ -660,13 +671,13 @@ BODY wire_visual:
   publish joint positions: false
   friction:
     rolling: 0.0
-    static: 0.1
+    static: 0.01
   restitution: 0.01
   damping:
     angular: 0.05
     linear: 0.04
   visible: true
-  collision groups: []
+  collision groups: *collision_groups
   use material: false
   color components:
     ambient:

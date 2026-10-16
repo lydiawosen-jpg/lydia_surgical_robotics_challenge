@@ -26,10 +26,41 @@ high resolution path: ./high_res/
 low resolution path: ./low_res/
 ignore inter-collision: false
 
-controller: &gripper_controller
-    P: 10.0
-    I: 0.0
-    D: 0.1
+joint dynamics anchors:
+  base joints:
+    controller: &base_joints_controller
+      P: 20.0
+      I: 0.0
+      D: 0.05
+    "base link-yaw link":
+      max motor impulse: &base_link_yaw_max_motor_impulse 5.000000075
+      damping: &base_link_yaw_damping 500.0
+    "main insertion link-tool roll link":
+      max motor impulse: &main_insertion_roll_max_motor_impulse 5000.0
+      damping: &main_insertion_roll_damping 0.1
+    "pitch end link-main insertion link":
+      max motor impulse: &pitch_insertion_max_motor_impulse 20000.0
+      damping: &pitch_insertion_damping 100.0
+    "tool pitch link-tool yaw link":
+      max motor impulse: &tool_pitch_yaw_max_motor_impulse 50000.0
+      damping: &tool_pitch_yaw_damping 0.0
+    "tool roll link-tool pitch link":
+      max motor impulse: &tool_roll_pitch_max_motor_impulse 20000.0
+      damping: &tool_roll_pitch_damping 5.00000007
+    "yaw link-pitch end link":
+      max motor impulse: &yaw_pitch_end_max_motor_impulse 20000.0
+      damping: &yaw_pitch_end_damping 0.0
+  gripper joints:
+    controller: &gripper_joints_controller
+      P: 20.0
+      I: 0.0
+      D: 0.001
+    "tool yaw link-tool gripper left link":
+      max motor impulse: &gripper_left_max_motor_impulse 20000.0
+      damping: &gripper_left_damping 0.49999999
+    "tool yaw link-tool gripper right link":
+      max motor impulse: &gripper_right_max_motor_impulse 50000.0
+      damping: &gripper_right_damping 0.49999999
 
 gravity:
   x: 0.0
@@ -708,9 +739,10 @@ JOINT base link-yaw link:
   enable feedback: false
   passive: false
   controller output type: VELOCITY
+  controller: *base_joints_controller
   type: revolute
-  max motor impulse: 5.000000075
-  damping: 500.0
+  max motor impulse: *base_link_yaw_max_motor_impulse
+  damping: *base_link_yaw_damping
   offset: 1.570800066
 JOINT main insertion link-tool roll link:
   name: main insertion link-tool roll link
@@ -735,9 +767,10 @@ JOINT main insertion link-tool roll link:
   enable feedback: false
   passive: false
   controller output type: VELOCITY
+  controller: *base_joints_controller
   type: revolute
-  max motor impulse: 5000.0
-  damping: 0.1
+  max motor impulse: *main_insertion_roll_max_motor_impulse
+  damping: *main_insertion_roll_damping
   offset: -1.5793739557
   joint offset: -0.0084290477
 JOINT pitch end link-main insertion link:
@@ -766,9 +799,10 @@ JOINT pitch end link-main insertion link:
   enable feedback: false
   passive: false
   controller output type: VELOCITY
+  controller: *base_joints_controller
   type: prismatic
-  max motor impulse: 20000.0
-  damping: 100.0
+  max motor impulse: *pitch_insertion_max_motor_impulse
+  damping: *pitch_insertion_damping
   offset: -3.133156538
 JOINT tool pitch link-tool yaw link:
   name: tool pitch link-tool yaw link
@@ -795,11 +829,11 @@ JOINT tool pitch link-tool yaw link:
     low: -1.4835299974
   enable feedback: false
   passive: false
-  controller: *gripper_controller
+  controller: *base_joints_controller
   controller output type: VELOCITY
   type: revolute
-  max motor impulse: 50000.0
-  damping: 0.0
+  max motor impulse: *tool_pitch_yaw_max_motor_impulse
+  damping: *tool_pitch_yaw_damping
   offset: -1.5746285915
 JOINT tool roll link-tool pitch link:
   name: tool roll link-tool pitch link
@@ -827,9 +861,10 @@ JOINT tool roll link-tool pitch link:
   enable feedback: false
   passive: false
   controller output type: VELOCITY
+  controller: *base_joints_controller
   type: revolute
-  max motor impulse: 20000.0
-  damping: 5.00000007
+  max motor impulse: *tool_roll_pitch_max_motor_impulse
+  damping: *tool_roll_pitch_damping
   offset: -1.5706599951
 JOINT tool yaw link-tool gripper left link:
   name: tool yaw link-tool gripper left link
@@ -856,11 +891,11 @@ JOINT tool yaw link-tool gripper left link:
     low: 0.0
   enable feedback: false
   passive: false
-  controller: *gripper_controller
+  controller: *gripper_joints_controller
   controller output type: VELOCITY
   type: revolute
-  max motor impulse: 20000.0
-  damping: 0.49999999
+  max motor impulse: *gripper_left_max_motor_impulse
+  damping: *gripper_left_damping
   offset: -3.1415903568
 JOINT tool yaw link-tool gripper right link:
   name: tool yaw link-tool gripper right link
@@ -887,11 +922,11 @@ JOINT tool yaw link-tool gripper right link:
     low: 0.0
   enable feedback: false
   passive: false
-  controller: *gripper_controller
+  controller: *gripper_joints_controller
   controller output type: VELOCITY
   type: revolute
-  max motor impulse: 50000.0
-  damping: 0.49999999
+  max motor impulse: *gripper_right_max_motor_impulse
+  damping: *gripper_right_damping
   offset: 3.1415901184
 JOINT yaw link-pitch end link:
   name: yaw link-pitch end link
@@ -919,7 +954,8 @@ JOINT yaw link-pitch end link:
   enable feedback: false
   passive: false
   controller output type: VELOCITY
+  controller: *base_joints_controller
   type: revolute
-  max motor impulse: 20000.0
-  damping: 0.0
+  max motor impulse: *yaw_pitch_end_max_motor_impulse
+  damping: *yaw_pitch_end_damping
   offset: -1.5707997084
