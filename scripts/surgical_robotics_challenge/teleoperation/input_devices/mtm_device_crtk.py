@@ -203,7 +203,7 @@ class MTM:
         joint_state_sub_topic_name = name + 'measured_js'
         gripper_topic_name = name + 'gripper/measured_js'
         clutch_topic_name = '/console1/clutch'
-        coag_topic_name = '/console1/operator_present'
+        coag_topic_name = '/console1/coag'
         camera_topic_name = '/console1/camera'
 
         pose_pub_topic_name = name + 'servo_cp'
@@ -509,10 +509,14 @@ class MTM:
         if mode == TeleopMode.CLUTCH:
             if previous_mode != TeleopMode.CLUTCH:
                 self.free_with_orientation_lock()
+                print('MTM: CLUTCH MODE ENGAGED')
         elif mode == TeleopMode.COAG:
             if previous_mode != TeleopMode.COAG:
-                self.unlock_orientation()
+                self.hold() # See if this works
+                time.sleep(0.1)
                 self.free()
+                self.unlock_orientation()
+                print('MTM: COAG MODE ENGAGED')
         else:
             self.hold()
 

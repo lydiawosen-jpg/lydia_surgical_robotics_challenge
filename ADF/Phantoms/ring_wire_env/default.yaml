@@ -500,8 +500,8 @@ BODY end_trigger:
 BODY ring_visual:
   name: ring_visual
   mesh: ring_visual.OBJ
-  collision mesh: ring_single_convex_mesh.OBJ
-  collision mesh type: CONVEX_HULL
+  collision mesh: ring_collision.OBJ
+  collision mesh type: CONCAVE_MESH
   mass: 0.1
   collision margin: 0.001
   scale: 1.0
@@ -529,7 +529,7 @@ BODY ring_visual:
   publish joint positions: false
   friction:
     rolling: 0.0
-    static: 0.0
+    static: 0.01
   restitution: 0.01
   damping:
     angular: 0.01
@@ -637,15 +637,12 @@ BODY start_trigger:
 BODY wire_visual:
   name: wire_visual
   mesh: wire_visual.OBJ
-  # collision mesh: wire_collision_allchunks.OBJ
-  collision mesh: ../high_res/wire_visual.OBJ
-  collision mesh type: CONCAVE_MESH
   mass: 0.0
   inertia:
     ix: 0.0
     iy: 0.0
     iz: 0.0
-  collision margin: 0.002
+  collision margin: 0.001
   scale: 1.0
   location:
     position:
@@ -678,6 +675,847 @@ BODY wire_visual:
     linear: 0.04
   visible: true
   collision groups: *collision_groups
+  compound collision shape:
+  - name: capsule_0
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.288808
+      radius: 0.0064
+    offset:
+      position:
+        x: -1.353916
+        y: -0.002290
+        z: 0.106748
+      orientation:
+        r: 0.002618
+        p: -0.011344
+        y: -0.000015
+  - name: capsule_1
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.154709
+      radius: 0.0064
+    offset:
+      position:
+        x: -1.352524
+        y: -0.001715
+        z: 0.328431
+      orientation:
+        r: -0.012330
+        p: 0.039183
+        y: -0.000242
+  - name: capsule_2
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.072205
+      radius: 0.0064
+    offset:
+      position:
+        x: -1.345733
+        y: -0.000291
+        z: 0.441623
+      orientation:
+        r: -0.013118
+        p: 0.104377
+        y: -0.000685
+  - name: capsule_3
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.072191
+      radius: 0.0064
+    offset:
+      position:
+        x: -1.335614
+        y: 0.000573
+        z: 0.513055
+      orientation:
+        r: -0.011064
+        p: 0.177035
+        y: -0.000982
+  - name: capsule_4
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.061821
+      radius: 0.0064
+    offset:
+      position:
+        x: -1.319904
+        y: 0.001112
+        z: 0.578045
+      orientation:
+        r: -0.004949
+        p: 0.307418
+        y: -0.000767
+  - name: capsule_5
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.041262
+      radius: 0.0064
+    offset:
+      position:
+        x: -1.300954
+        y: 0.001153
+        z: 0.625768
+      orientation:
+        r: 0.005781
+        p: 0.483829
+        y: 0.001427
+  - name: capsule_6
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.041100
+      radius: 0.0064
+    offset:
+      position:
+        x: -1.276840
+        y: 0.000563
+        z: 0.658568
+      orientation:
+        r: 0.033269
+        p: 0.784420
+        y: 0.013762
+  - name: capsule_7
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.040873
+      radius: 0.0064
+    offset:
+      position:
+        x: -1.242701
+        y: -0.000973
+        z: 0.678719
+      orientation:
+        r: 0.185240
+        p: 1.287511
+        y: 0.139178
+  - name: capsule_8
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.051438
+      radius: 0.0064
+    offset:
+      position:
+        x: -1.198094
+        y: -0.005248
+        z: 0.679156
+      orientation:
+        r: 2.584902
+        p: 1.331374
+        y: 2.443567
+  - name: capsule_9
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.041262
+      radius: 0.0064
+    offset:
+      position:
+        x: -1.156834
+        y: -0.013386
+        z: 0.662289
+      orientation:
+        r: 2.743499
+        p: 0.908914
+        y: 2.358473
+  - name: capsule_10
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.051364
+      radius: 0.0064
+    offset:
+      position:
+        x: -1.126569
+        y: -0.025937
+        z: 0.630463
+      orientation:
+        r: 2.779186
+        p: 0.576080
+        y: 2.033946
+  - name: capsule_11
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.061818
+      radius: 0.0064
+    offset:
+      position:
+        x: -1.102685
+        y: -0.043470
+        z: 0.582766
+      orientation:
+        r: 2.796770
+        p: 0.325843
+        y: 1.513141
+  - name: capsule_12
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.237175
+      radius: 0.0064
+    offset:
+      position:
+        x: -1.072533
+        y: -0.091665
+        z: 0.444817
+      orientation:
+        r: 2.807663
+        p: 0.171666
+        y: 0.944098
+  - name: capsule_13
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.051544
+      radius: 0.0064
+    offset:
+      position:
+        x: -1.045020
+        y: -0.138149
+        z: 0.311092
+      orientation:
+        r: 2.804166
+        p: 0.285394
+        y: 1.401405
+  - name: capsule_14
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.051405
+      radius: 0.0064
+    offset:
+      position:
+        x: -1.026123
+        y: -0.154113
+        z: 0.266202
+      orientation:
+        r: 2.795335
+        p: 0.470061
+        y: 1.880020
+  - name: capsule_15
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.050995
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.995432
+        y: -0.168063
+        z: 0.228862
+      orientation:
+        r: 2.768766
+        p: 0.843655
+        y: 2.345877
+  - name: capsule_16
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.041262
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.956324
+        y: -0.176570
+        z: 0.208857
+      orientation:
+        r: 2.636588
+        p: 1.334854
+        y: 2.508805
+  - name: capsule_17
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.051275
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.910954
+        y: -0.178408
+        z: 0.208684
+      orientation:
+        r: -0.121739
+        p: 1.411050
+        y: -0.103730
+  - name: capsule_18
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.050974
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.866058
+        y: -0.172625
+        z: 0.228161
+      orientation:
+        r: -0.330183
+        p: 0.876400
+        y: -0.155823
+  - name: capsule_19
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.041262
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.836294
+        y: -0.161070
+        z: 0.260404
+      orientation:
+        r: -0.356782
+        p: 0.515989
+        y: -0.095086
+  - name: capsule_20
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.051561
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.818866
+        y: -0.145893
+        z: 0.300299
+      orientation:
+        r: -0.368415
+        p: 0.285015
+        y: -0.053454
+  - name: capsule_21
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.061866
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.806515
+        y: -0.125852
+        z: 0.351786
+      orientation:
+        r: -0.373441
+        p: 0.165688
+        y: -0.031371
+  - name: capsule_22
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.185636
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.790700
+        y: -0.080926
+        z: 0.465973
+      orientation:
+        r: -0.375312
+        p: 0.115676
+        y: -0.021989
+  - name: capsule_23
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.061782
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.771915
+        y: -0.036404
+        z: 0.579575
+      orientation:
+        r: -0.367924
+        p: 0.264392
+        y: -0.049473
+  - name: capsule_24
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.041262
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.754274
+        y: -0.019306
+        z: 0.624527
+      orientation:
+        r: -0.356219
+        p: 0.482285
+        y: -0.088485
+  - name: capsule_25
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.041089
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.729295
+        y: -0.008547
+        z: 0.654518
+      orientation:
+        r: -0.328612
+        p: 0.848194
+        y: -0.149438
+  - name: capsule_26
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.051053
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.689022
+        y: -0.003017
+        z: 0.673051
+      orientation:
+        r: -0.199102
+        p: 1.342087
+        y: -0.158271
+  - name: capsule_27
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.041262
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.643962
+        y: -0.001238
+        z: 0.674572
+      orientation:
+        r: -2.990059
+        p: 1.365777
+        y: -2.955489
+  - name: capsule_28
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.009993
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.619367
+        y: 0.000069
+        z: 0.668142
+      orientation:
+        r: -2.854179
+        p: 1.075431
+        y: -2.665478
+  - name: capsule_29
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.040917
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.600089
+        y: 0.005203
+        z: 0.652555
+      orientation:
+        r: -2.818230
+        p: 0.814634
+        y: -2.418720
+  - name: capsule_30
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.041262
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.575970
+        y: 0.015968
+        z: 0.621908
+      orientation:
+        r: -2.792815
+        p: 0.464153
+        y: -1.860412
+  - name: capsule_31
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.061832
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.559784
+        y: 0.032911
+        z: 0.576387
+      orientation:
+        r: -2.780667
+        p: 0.226745
+        y: -1.115864
+  - name: capsule_32
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.237179
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.541371
+        y: 0.085922
+        z: 0.438037
+      orientation:
+        r: -2.774403
+        p: 0.096812
+        y: -0.510403
+  - name: capsule_33
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.061780
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.522275
+        y: 0.138850
+        z: 0.299862
+      orientation:
+        r: -2.781234
+        p: 0.249696
+        y: -1.206582
+  - name: capsule_34
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.041262
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.505096
+        y: 0.155650
+        z: 0.254662
+      orientation:
+        r: -2.793121
+        p: 0.481030
+        y: -1.896604
+  - name: capsule_35
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.041041
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.480091
+        y: 0.166152
+        z: 0.224666
+      orientation:
+        r: -2.820617
+        p: 0.853137
+        y: -2.457232
+  - name: capsule_36
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.051063
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.439811
+        y: 0.171521
+        z: 0.205986
+      orientation:
+        r: -2.954653
+        p: 1.334435
+        y: -2.904700
+  - name: capsule_37
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.041163
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.395005
+        y: 0.170267
+        z: 0.204429
+      orientation:
+        r: 0.501187
+        p: 1.329248
+        y: 0.395880
+  - name: capsule_38
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.009986
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.370683
+        y: 0.166946
+        z: 0.211027
+      orientation:
+        r: 0.396781
+        p: 1.052897
+        y: 0.232611
+  - name: capsule_39
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.040965
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.352067
+        y: 0.160801
+        z: 0.227045
+      orientation:
+        r: 0.361185
+        p: 0.771284
+        y: 0.147975
+  - name: capsule_40
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.041262
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.329058
+        y: 0.149404
+        z: 0.258415
+      orientation:
+        r: 0.338518
+        p: 0.437033
+        y: 0.075862
+  - name: capsule_41
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.061831
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.313525
+        y: 0.133493
+        z: 0.304601
+      orientation:
+        r: 0.327559
+        p: 0.221788
+        y: 0.036799
+  - name: capsule_42
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.237177
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.294360
+        y: 0.086351
+        z: 0.444997
+      orientation:
+        r: 0.323031
+        p: 0.104451
+        y: 0.017034
+  - name: capsule_43
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.061840
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.274363
+        y: 0.039156
+        z: 0.585170
+      orientation:
+        r: 0.331608
+        p: 0.249437
+        y: 0.041952
+  - name: capsule_44
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.051421
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.254373
+        y: 0.021733
+        z: 0.634702
+      orientation:
+        r: 0.347048
+        p: 0.501380
+        y: 0.089714
+  - name: capsule_45
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.041262
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.226148
+        y: 0.009160
+        z: 0.668143
+      orientation:
+        r: 0.381113
+        p: 0.877471
+        y: 0.180537
+  - name: capsule_46
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.051375
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.185318
+        y: 0.001168
+        z: 0.685597
+      orientation:
+        r: 0.534607
+        p: 1.332633
+        y: 0.424178
+  - name: capsule_47
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.041262
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.140136
+        y: -0.002900
+        z: 0.686831
+      orientation:
+        r: 2.899997
+        p: 1.370754
+        y: 2.846804
+  - name: capsule_48
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.041119
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.102766
+        y: -0.004532
+        z: 0.671533
+      orientation:
+        r: 3.084164
+        p: 0.986745
+        y: 3.034866
+  - name: capsule_49
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.010217
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.082313
+        y: -0.005271
+        z: 0.656317
+      orientation:
+        r: 3.118835
+        p: 0.702584
+        y: 3.079515
+  - name: capsule_50
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.041174
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.067193
+        y: -0.005617
+        z: 0.635565
+      orientation:
+        r: 3.126323
+        p: 0.611523
+        y: 3.093226
+  - name: capsule_51
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.041262
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.047333
+        y: -0.005902
+        z: 0.599711
+      orientation:
+        r: 3.140156
+        p: 0.400341
+        y: 3.134511
+  - name: capsule_52
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.072106
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.029941
+        y: -0.005737
+        z: 0.545894
+      orientation:
+        r: -3.136074
+        p: 0.262392
+        y: -3.099777
+  - name: capsule_53
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.072193
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.015365
+        y: -0.005177
+        z: 0.475361
+      orientation:
+        r: -3.131280
+        p: 0.145243
+        y: -3.000077
+  - name: capsule_54
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.144381
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.005599
+        y: -0.003932
+        z: 0.367604
+      orientation:
+        r: -3.129429
+        p: 0.062946
+        y: -2.759931
+  - name: capsule_55
+    shape: CAPSULE
+    geometry:
+      axis: Z
+      height: 0.330078
+      radius: 0.0064
+    offset:
+      position:
+        x: -0.001052
+        y: -0.001805
+        z: 0.130528
+      orientation:
+        r: -3.134011
+        p: 0.000040
+        y: -0.010503
   use material: false
   color components:
     ambient:
