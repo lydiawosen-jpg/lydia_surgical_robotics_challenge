@@ -4,13 +4,13 @@ bodies:
 - BODY ring_visual
 - BODY wire_visual
 ghost objects:
-# - BODY start_trigger
-# - BODY checkpoint1
-# - BODY checkpoint2
-# - BODY checkpoint3
-# - BODY checkpoint4
-# - BODY checkpoint5
-# - BODY end_trigger
+- BODY start_trigger
+- BODY checkpoint1
+- BODY checkpoint2
+- BODY checkpoint3
+- BODY checkpoint4
+- BODY checkpoint5
+- BODY end_trigger
 
 soft bodies: []
 joints: []
