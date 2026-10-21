@@ -4,13 +4,13 @@ bodies:
 - BODY ring_visual
 - BODY wire_visual
 ghost objects:
-- BODY start_trigger
-- BODY checkpoint1
-- BODY checkpoint2
-- BODY checkpoint3
-- BODY checkpoint4
-- BODY checkpoint5
-- BODY end_trigger
+# - BODY start_trigger
+# - BODY checkpoint1
+# - BODY checkpoint2
+# - BODY checkpoint3
+# - BODY checkpoint4
+# - BODY checkpoint5
+# - BODY end_trigger
 
 soft bodies: []
 joints: []
@@ -30,6 +30,7 @@ namespace: /ambf/env/phantom/
 visible: &ghosts_visible false
 collision groups: &base_collision_groups [11, 12]
 collision groups: &collision_groups [12]
+wire capsule radius: &wire_capsule_radius 0.0064
 
 BODY base:
   name: base
@@ -45,8 +46,8 @@ BODY base:
   location:
     position:
       x: 0.2682
-      y: 1.769
-      z: 7.1739
+      y: 1.8988
+      z: 7.3262
     orientation:
       r: 0.0
       p: -0.0
@@ -168,8 +169,8 @@ BODY checkpoint1:
   location:
     position:
       x: 0.8784
-      y: 1.7278
-      z: 7.9105
+      y: 1.8576
+      z: 8.0628
     orientation:
       r: 0.0
       p: -0.0
@@ -223,8 +224,8 @@ BODY checkpoint2:
   location:
     position:
       x: 0.6148
-      y: 1.9054
-      z: 7.4185
+      y: 2.0352
+      z: 7.5708
     orientation:
       r: 0.0
       p: -0.0
@@ -278,8 +279,8 @@ BODY checkpoint3:
   location:
     position:
       x: 0.375
-      y: 1.7246
-      z: 7.8997
+      y: 1.8544
+      z: 8.0520
     orientation:
       r: 0.0
       p: -0.0
@@ -333,8 +334,8 @@ BODY checkpoint4:
   location:
     position:
       x: 0.1088
-      y: 1.5534
-      z: 7.4211
+      y: 1.6832
+      z: 7.5734
     orientation:
       r: 0.0
       p: -0.0
@@ -388,8 +389,8 @@ BODY checkpoint5:
   location:
     position:
       x: -0.184
-      y: 1.7278
-      z: 7.8983
+      y: 1.8576
+      z: 8.0506
     orientation:
       r: 0.0
       p: -0.0
@@ -442,8 +443,8 @@ BODY end_trigger:
   location:
     position:
       x: -0.3176
-      y: 1.7194
-      z: 7.3799
+      y: 1.8492
+      z: 7.5322
     orientation:
       r: 0.0
       p: -0.0
@@ -501,15 +502,15 @@ BODY ring_visual:
   name: ring_visual
   mesh: ring_visual.OBJ
   collision mesh: ring_collision.OBJ
-  collision mesh type: CONCAVE_MESH
+  collision mesh type: CONVEX_HULL
   mass: 0.1
   collision margin: 0.001
   scale: 1.0
   location:
     position:
       x: 1.0394
-      y: 1.729
-      z: 7.2521
+      y: 1.8588
+      z: 7.4044
     orientation:
       r: 0.0
       p: -0.0
@@ -579,8 +580,8 @@ BODY start_trigger:
   location:
     position:
       x: 1.0396
-      y: 1.727
-      z: 7.3799
+      y: 1.8568
+      z: 7.5322
     orientation:
       r: 0.0
       p: -0.0
@@ -647,8 +648,8 @@ BODY wire_visual:
   location:
     position:
       x: 1.0402
-      y: 1.7312
-      z: 7.2207
+      y: 1.8610
+      z: 7.3730
     orientation:
       r: 0.0
       p: -0.0
@@ -680,8 +681,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.288808
-      radius: 0.0064
+      height: 0.298808
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -1.353916
@@ -695,8 +696,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.154709
-      radius: 0.0064
+      height: 0.164709
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -1.352524
@@ -710,8 +711,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.072205
-      radius: 0.0064
+      height: 0.082205
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -1.345733
@@ -725,8 +726,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.072191
-      radius: 0.0064
+      height: 0.082191
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -1.335614
@@ -740,8 +741,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.061821
-      radius: 0.0064
+      height: 0.071821
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -1.319904
@@ -755,8 +756,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.041262
-      radius: 0.0064
+      height: 0.051262
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -1.300954
@@ -770,8 +771,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.041100
-      radius: 0.0064
+      height: 0.051100
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -1.276840
@@ -785,8 +786,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.040873
-      radius: 0.0064
+      height: 0.050873
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -1.242701
@@ -800,8 +801,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.051438
-      radius: 0.0064
+      height: 0.061438
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -1.198094
@@ -815,8 +816,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.041262
-      radius: 0.0064
+      height: 0.051262
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -1.156834
@@ -830,8 +831,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.051364
-      radius: 0.0064
+      height: 0.061364
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -1.126569
@@ -845,8 +846,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.061818
-      radius: 0.0064
+      height: 0.071818
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -1.102685
@@ -860,8 +861,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.237175
-      radius: 0.0064
+      height: 0.247175
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -1.072533
@@ -875,8 +876,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.051544
-      radius: 0.0064
+      height: 0.061544
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -1.045020
@@ -890,8 +891,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.051405
-      radius: 0.0064
+      height: 0.061405
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -1.026123
@@ -905,8 +906,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.050995
-      radius: 0.0064
+      height: 0.060995
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.995432
@@ -920,8 +921,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.041262
-      radius: 0.0064
+      height: 0.051262
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.956324
@@ -935,8 +936,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.051275
-      radius: 0.0064
+      height: 0.061275
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.910954
@@ -950,8 +951,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.050974
-      radius: 0.0064
+      height: 0.060974
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.866058
@@ -965,8 +966,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.041262
-      radius: 0.0064
+      height: 0.051262
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.836294
@@ -980,8 +981,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.051561
-      radius: 0.0064
+      height: 0.061561
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.818866
@@ -995,8 +996,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.061866
-      radius: 0.0064
+      height: 0.071866
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.806515
@@ -1010,8 +1011,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.185636
-      radius: 0.0064
+      height: 0.195636
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.790700
@@ -1025,8 +1026,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.061782
-      radius: 0.0064
+      height: 0.071782
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.771915
@@ -1040,8 +1041,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.041262
-      radius: 0.0064
+      height: 0.051262
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.754274
@@ -1055,8 +1056,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.041089
-      radius: 0.0064
+      height: 0.051089
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.729295
@@ -1070,8 +1071,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.051053
-      radius: 0.0064
+      height: 0.061053
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.689022
@@ -1085,8 +1086,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.041262
-      radius: 0.0064
+      height: 0.051262
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.643962
@@ -1100,8 +1101,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.009993
-      radius: 0.0064
+      height: 0.019993
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.619367
@@ -1115,8 +1116,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.040917
-      radius: 0.0064
+      height: 0.050917
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.600089
@@ -1130,8 +1131,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.041262
-      radius: 0.0064
+      height: 0.051262
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.575970
@@ -1145,8 +1146,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.061832
-      radius: 0.0064
+      height: 0.071832
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.559784
@@ -1160,8 +1161,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.237179
-      radius: 0.0064
+      height: 0.247179
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.541371
@@ -1175,8 +1176,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.061780
-      radius: 0.0064
+      height: 0.071780
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.522275
@@ -1190,8 +1191,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.041262
-      radius: 0.0064
+      height: 0.051262
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.505096
@@ -1205,8 +1206,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.041041
-      radius: 0.0064
+      height: 0.051041
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.480091
@@ -1220,8 +1221,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.051063
-      radius: 0.0064
+      height: 0.061063
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.439811
@@ -1235,8 +1236,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.041163
-      radius: 0.0064
+      height: 0.051163
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.395005
@@ -1250,8 +1251,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.009986
-      radius: 0.0064
+      height: 0.019986
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.370683
@@ -1265,8 +1266,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.040965
-      radius: 0.0064
+      height: 0.050965
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.352067
@@ -1280,8 +1281,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.041262
-      radius: 0.0064
+      height: 0.051262
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.329058
@@ -1295,8 +1296,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.061831
-      radius: 0.0064
+      height: 0.071831
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.313525
@@ -1310,8 +1311,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.237177
-      radius: 0.0064
+      height: 0.247177
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.294360
@@ -1325,8 +1326,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.061840
-      radius: 0.0064
+      height: 0.071840
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.274363
@@ -1340,8 +1341,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.051421
-      radius: 0.0064
+      height: 0.061421
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.254373
@@ -1355,8 +1356,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.041262
-      radius: 0.0064
+      height: 0.051262
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.226148
@@ -1370,8 +1371,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.051375
-      radius: 0.0064
+      height: 0.061375
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.185318
@@ -1385,8 +1386,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.041262
-      radius: 0.0064
+      height: 0.051262
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.140136
@@ -1400,8 +1401,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.041119
-      radius: 0.0064
+      height: 0.051119
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.102766
@@ -1415,8 +1416,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.010217
-      radius: 0.0064
+      height: 0.020217
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.082313
@@ -1430,8 +1431,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.041174
-      radius: 0.0064
+      height: 0.051174
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.067193
@@ -1445,8 +1446,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.041262
-      radius: 0.0064
+      height: 0.051262
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.047333
@@ -1460,8 +1461,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.072106
-      radius: 0.0064
+      height: 0.082106
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.029941
@@ -1475,8 +1476,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.072193
-      radius: 0.0064
+      height: 0.082193
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.015365
@@ -1490,8 +1491,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.144381
-      radius: 0.0064
+      height: 0.154381
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.005599
@@ -1505,8 +1506,8 @@ BODY wire_visual:
     shape: CAPSULE
     geometry:
       axis: Z
-      height: 0.330078
-      radius: 0.0064
+      height: 0.340078
+      radius: *wire_capsule_radius
     offset:
       position:
         x: -0.001052
