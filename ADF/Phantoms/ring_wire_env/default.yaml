@@ -47,7 +47,7 @@ BODY base:
     position:
       x: 0.2682
       y: 1.8988
-      z: 7.3262
+      z: 7.25
     orientation:
       r: 0.0
       p: -0.0
@@ -504,6 +504,10 @@ BODY ring_visual:
   collision mesh: ring_collision.OBJ
   collision mesh type: CONVEX_HULL
   mass: 0.1
+  # inertia:
+  #   ix: 0.000001
+  #   iy: 0.000001
+  #   iz: 0.00004
   collision margin: 0.001
   scale: 1.0
   location:
@@ -530,13 +534,13 @@ BODY ring_visual:
   publish joint positions: false
   friction:
     rolling: 0.0
-    static: 0.01
+    static: 0.05
   restitution: 0.01
   damping:
-    angular: 0.01
-    linear: 0.04
+    angular: 0.001
+    linear: 0.004
   visible: true
-  collision groups: *collision_groups
+  collision groups: []
   use material: false
   color components:
     ambient:

@@ -1,12 +1,22 @@
-# Blender 4.5.9 LTS MTL File: 'working_ringwire_task.blend'
+# Blender 5.1.1 MTL File: 'None'
 # www.blender.org
 
-newmtl Material
+newmtl Material.001
 Ns 250.000000
 Ka 1.000000 1.000000 1.000000
-Kd 0.621709 0.603364 0.654418
+Kd 0.102048 0.099264 0.107003
 Ks 0.500000 0.500000 0.500000
 Ke 0.000000 0.000000 0.000000
 Ni 1.450000
+d 1.000000
+illum 2
+
+newmtl basemat
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
 d 1.000000
 illum 2
