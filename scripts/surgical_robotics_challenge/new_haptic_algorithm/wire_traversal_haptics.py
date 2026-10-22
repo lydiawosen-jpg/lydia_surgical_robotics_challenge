@@ -10,8 +10,7 @@ from rclpy.node import Node
 from ambf_msgs.msg import RigidBodyState, RigidBodyCmd, ActuatorCmd
 from scipy.optimize import minimize_scalar, minimize
 from geometry_msgs.msg import WrenchStamped, TwistStamped
-from geometry_msgs.msg import PoseStamped
-from std_msgs.msg import Bool, Float32
+from std_msgs.msg import Bool
 from sensor_msgs.msg import Joy
 from argparse import ArgumentParser
 # import centerline tools from mentor's repo
@@ -25,12 +24,8 @@ SCENE_SCALE = 10.0
 
 
 class WireTrackerNode(Node):
-    MTM_TRANSLATION_SCALE = 0.2 * SCENE_SCALE
-
-    def __init__(self, enable_mtm_perturbations=False):
+    def __init__(self):
         super().__init__('wire_distance_tracker')
-
-        self.enable_mtm_perturbations = enable_mtm_perturbations
 
         # tunable at runtime from the optional GUI
         self.params = {
@@ -59,12 +54,10 @@ class WireTrackerNode(Node):
         self.latest_twist_L = None
         self.latest_twist_R = None
         self.coag_pressed = False
+        self.clutch_pressed = False
         self.prev_u_tangent = None
         self.last_ring_cmd_time = None
         self.mover_timeout_reported = False
-        self.clutch_pressed = False
-        self.mtm_pose = None
-        self.mtm_pose_at_clutch = None
         # psm1 is teleoperated by MTML, psm2 by MTMR
         self.ring_held_L = False
         self.ring_held_R = False
@@ -80,8 +73,6 @@ class WireTrackerNode(Node):
             Joy, '/console1/operator_present', self.coag_callback, 1)
         self.clutch_sub = self.create_subscription(
             Joy, '/console1/clutch', self.clutch_callback, 1)
-        self.mtm_pose_sub = self.create_subscription(
-            PoseStamped, '/MTML/measured_cp', self.mtm_pose_callback, 1)
         self.wire_sub = self.create_subscription(
             RigidBodyState, '/ambf/env/phantom/wire_visual/State',
             self.wire_pose_callback, 1)
@@ -112,26 +103,6 @@ class WireTrackerNode(Node):
         self.orientation_abs_pub_R = self.create_publisher(
             Bool, '/MTMR/body/set_cf_orientation_absolute', 1)
 
-        # PUBLISHERS — debug topics for PlotJuggler
-        self.debug_error_pub = self.create_publisher(
-            Float32, '/debug/radial_error', 1)
-        self.debug_force_mag_pub = self.create_publisher(
-            Float32, '/debug/force_magnitude', 1)
-        self.debug_angular_error_pub = self.create_publisher(
-            Float32, '/debug/angular_error', 1)
-        self.debug_torque_x_pub = self.create_publisher(
-            Float32, '/debug/torque_x', 1)
-        self.debug_torque_y_pub = self.create_publisher(
-            Float32, '/debug/torque_y', 1)
-        self.debug_torque_z_pub = self.create_publisher(
-            Float32, '/debug/torque_z', 1)
-        self.debug_ring_pos_x_pub = self.create_publisher(
-            Float32, '/debug/ring_pos_x', 1)
-        self.debug_ring_pos_y_pub = self.create_publisher(
-            Float32, '/debug/ring_pos_y', 1)
-        self.debug_ring_pos_z_pub = self.create_publisher(
-            Float32, '/debug/ring_pos_z', 1)
-
         # publish absolute orientation flag once at startup
         abs_flag = Bool()
         abs_flag.data = True
@@ -150,6 +121,9 @@ class WireTrackerNode(Node):
     def coag_callback(self, msg):
         self.coag_pressed = msg.buttons[0]
 
+    def clutch_callback(self, msg):
+        self.clutch_pressed = bool(msg.buttons[0])
+
     @staticmethod
     def is_ring_grasp(msg):
         return bool(msg.actuate) and 'ring_visual' in msg.body_name.data
@@ -159,20 +133,6 @@ class WireTrackerNode(Node):
 
     def grasp_callback_R(self, msg):
         self.ring_held_R = self.is_ring_grasp(msg)
-
-    def clutch_callback(self, msg):
-        pressed = bool(msg.buttons[0])
-        if pressed and not self.clutch_pressed and self.enable_mtm_perturbations:
-            self.mtm_pose_at_clutch = self.mtm_pose
-        elif not pressed:
-            self.mtm_pose_at_clutch = None
-        self.clutch_pressed = pressed
-
-    def mtm_pose_callback(self, msg):
-        self.mtm_pose = pose_to_frame(msg.pose)
-        if (self.clutch_pressed and self.enable_mtm_perturbations and
-                self.mtm_pose_at_clutch is None):
-            self.mtm_pose_at_clutch = self.mtm_pose
 
     def ring_cmd_callback(self, msg):
         self.last_ring_cmd_time = time.time()
@@ -220,22 +180,6 @@ class WireTrackerNode(Node):
 
     def get_ring_frame_in_wire(self, msg_ring):
         T_ring_world = pose_to_frame(msg_ring.pose)
-        if (self.enable_mtm_perturbations and self.clutch_pressed and
-            self.mtm_pose_at_clutch is not None and self.mtm_pose is not None and
-            self.latest_T_camera_world is not None):
-            mtm_base_to_camera = PyKDL.Rotation.RotX(-0.865)
-            translation_mtm = self.mtm_pose.p - self.mtm_pose_at_clutch.p
-            translation_camera = (self.MTM_TRANSLATION_SCALE *
-                                  (mtm_base_to_camera * translation_mtm))
-            translation_delta = self.latest_T_camera_world.M * translation_camera
-            rotation_mtm = self.mtm_pose.M * self.mtm_pose_at_clutch.M.Inverse()
-            rotation_camera = (mtm_base_to_camera * rotation_mtm *
-                               mtm_base_to_camera.Inverse())
-            rotation_delta = (self.latest_T_camera_world.M * rotation_camera *
-                              self.latest_T_camera_world.M.Inverse())
-            T_ring_world = PyKDL.Frame(
-                rotation_delta * T_ring_world.M,
-                T_ring_world.p + translation_delta)
         return self.latest_T_wire_world.Inverse() * T_ring_world
 
     def get_closest_wire_point(self, ring_com):
@@ -357,7 +301,7 @@ class WireTrackerNode(Node):
                                       f_total_L, f_total_R,
                                       torque_total_L, torque_total_R):
         # zero the wrench when coag is not pressed
-        if not self.coag_pressed:
+        if self.clutch_pressed or not self.coag_pressed:
             self.zero_wrench()
             return
 
@@ -442,12 +386,6 @@ class WireTrackerNode(Node):
                 max_force, max_torque, zero, zero, zero, zero)
             return
 
-        # DEBUG — ring position and radial error
-        self.debug_ring_pos_x_pub.publish(Float32(data=float(ring_com[0])))
-        self.debug_ring_pos_y_pub.publish(Float32(data=float(ring_com[1])))
-        self.debug_ring_pos_z_pub.publish(Float32(data=float(ring_com[2])))
-        self.debug_error_pub.publish(Float32(data=float(min_distance)))
-
         # LINEAR FORCE
         f_linear, u_vector_ring_to_wire = self.compute_linear_force(
             min_distance, closest_wire_point, ring_com, kp_pos, linear_deadband)
@@ -457,10 +395,6 @@ class WireTrackerNode(Node):
 
         f_total_L = f_linear - f_damping_L
         f_total_R = f_linear - f_damping_R
-
-        # DEBUG — force magnitude
-        self.debug_force_mag_pub.publish(
-            Float32(data=float(np.linalg.norm(f_total_L))))
 
         # ROTATIONAL TORQUE
         angular_error_deg, u_tangent, u_ring_z, dot_product = \
@@ -475,13 +409,6 @@ class WireTrackerNode(Node):
 
         torque_total_L = torque_angular - torque_damping_L
         torque_total_R = torque_angular - torque_damping_R
-
-        # DEBUG — angular error and torque
-        self.debug_angular_error_pub.publish(
-            Float32(data=float(angular_error_deg)))
-        self.debug_torque_x_pub.publish(Float32(data=float(torque_angular[0])))
-        self.debug_torque_y_pub.publish(Float32(data=float(torque_angular[1])))
-        self.debug_torque_z_pub.publish(Float32(data=float(torque_angular[2])))
 
         # PUBLISH WRENCH
         self.transform_and_publish_wrench(
@@ -557,16 +484,12 @@ def run_gui(params):
 def main(args=None):
     parser = ArgumentParser()
     parser.add_argument(
-        '--mtm-perturb', action='store_true',
-        help='Enable clutch-controlled MTML pose perturbations')
-    parser.add_argument(
         '--gui', action='store_true',
         help='Open a window to edit gains and deadbands at runtime')
     parsed_args, remaining = parser.parse_known_args()
 
     rclpy.init(args=remaining)
-    tracker = WireTrackerNode(
-        enable_mtm_perturbations=parsed_args.mtm_perturb)
+    tracker = WireTrackerNode()
     try:
         if parsed_args.gui:
             # Tk needs the main thread, so spin ROS in the background
