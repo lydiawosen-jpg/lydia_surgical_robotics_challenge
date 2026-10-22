@@ -25,6 +25,10 @@ high resolution path: high_res/
 low resolution path: low_res/
 ignore inter-collision: false
 namespace: /ambf/env/phantom/
+plugins:
+- name: ring_wire_constraint_plugin
+  filename: libring_wire_constraint_plugin.so
+  path: ../../../plugin/build/
 
 # Set the visibility of the ghost objects. If true, the ghost objects will be visible in the simulation. If false, they will be invisible.
 visible: &ghosts_visible false
@@ -540,7 +544,7 @@ BODY ring_visual:
     angular: 0.001
     linear: 0.004
   visible: true
-  collision groups: []
+  collision groups: [11]
   use material: false
   color components:
     ambient:
