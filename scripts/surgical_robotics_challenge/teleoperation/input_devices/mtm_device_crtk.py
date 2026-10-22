@@ -497,6 +497,8 @@ class MTM:
 
     def free(self):
         self._free_pub.publish(Empty())
+        # Since setting to free sets joint control mode, the next command should set to cartesian control mode, allowing built in platform adjustment
+        self._wrench_pub.publish(WrenchStamped())
 
     def free_with_orientation_lock(self):
         self.free()
