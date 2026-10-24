@@ -13,11 +13,13 @@ include_directories(${AMBF_INCLUDE_DIRS})
 
 add_definitions(${AMBF_DEFINITIONS})
 
-add_library(ring_wire_constraint_plugin SHARED ring_wire_constraint_plugin.cpp)
+set (PLUGIN_NAME ring_wire_constraint)
 
-target_link_libraries(ring_wire_constraint_plugin PRIVATE ambf_framework)
+add_library(${PLUGIN_NAME} SHARED ring_wire_constraint_plugin.cpp)
 
-set_target_properties(ring_wire_constraint_plugin PROPERTIES
+target_link_libraries(${PLUGIN_NAME} PRIVATE ambf_framework)
+
+set_target_properties(${PLUGIN_NAME} PROPERTIES
   PREFIX "lib"
   LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BUILD_DIR}"
 )
